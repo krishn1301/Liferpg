@@ -1,0 +1,20 @@
+appId: com.liferpg.app
+productName: LifeRPG
+directories:
+  buildResources: build
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+asarUnpack:
+  - resources/**
+win:
+  executableName: LifeRPG
+nsis:
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: LifeRPG
+  uninstallDisplayName: LifeRPG
+  createDesktopShortcut: always
+npmRebuild: false

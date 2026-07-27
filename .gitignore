@@ -1,0 +1,32 @@
+node_modules
+dist
+dist-ssr
+out
+.DS_Store
+.eslintcache
+*.log*
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Signing — NEVER commit these. Back up the .jks somewhere permanent.
+*.jks
+*.keystore
+keystore.properties
+
+# Android build artifacts
+android/.gradle
+android/build
+android/app/build
+android/local.properties
+android/captures
+android/.idea
+android/app/src/main/assets/public
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/app/src/main/res/xml/config.xml
+
+# Vite / PWA generated
+dev-dist
