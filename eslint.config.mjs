@@ -1,31 +1,31 @@
-import eslint from '@electron-toolkit/eslint-config'
-import eslintConfigPrettier from '@electron-toolkit/eslint-config-prettier'
-import eslintPluginReact from 'eslint-plugin-react'
-import eslintPluginReactHooks from 'eslint-plugin-react-hooks'
-import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
+import js from '@eslint/js'
+import react from 'eslint-plugin-react'
+import reactHooks from 'eslint-plugin-react-hooks'
+import globals from 'globals'
 
 export default [
-  { ignores: ['**/node_modules', '**/dist', '**/out'] },
-  eslint,
-  eslintPluginReact.configs.flat.recommended,
-  eslintPluginReact.configs.flat['jsx-runtime'],
-  {
-    settings: {
-      react: {
-        version: 'detect'
-      }
-    }
-  },
+  { ignores: ['dist/**', 'android/**', 'legacy/**', 'dev-dist/**', 'node_modules/**'] },
+  js.configs.recommended,
   {
     files: ['**/*.{js,jsx}'],
-    plugins: {
-      'react-hooks': eslintPluginReactHooks,
-      'react-refresh': eslintPluginReactRefresh
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: { ...globals.browser, __APP_VERSION__: 'readonly' },
+      parserOptions: { ecmaFeatures: { jsx: true } }
     },
+    settings: { react: { version: 'detect' } },
+    plugins: { react, 'react-hooks': reactHooks },
     rules: {
-      ...eslintPluginReactHooks.configs.recommended.rules,
-      ...eslintPluginReactRefresh.configs.vite.rules
+      ...react.configs.flat.recommended.rules,
+      ...react.configs.flat['jsx-runtime'].rules,
+      ...reactHooks.configs.recommended.rules,
+      'react/prop-types': 'off',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
     }
   },
-  eslintConfigPrettier
+  {
+    files: ['vite.config.js', '**/*.test.js'],
+    languageOptions: { globals: { ...globals.node } }
+  }
 ]

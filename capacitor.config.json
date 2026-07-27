@@ -1,0 +1,18 @@
+{
+  "appId": "com.liferpg.app",
+  "appName": "LifeRPG",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#0e0e0e"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#22c55e"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0e0e0e"
+    }
+  }
+}

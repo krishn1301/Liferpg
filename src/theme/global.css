@@ -1,0 +1,88 @@
+/* Inter ships self-hosted via @fontsource-variable/inter, imported in main.jsx.
+   The desktop build's Google Fonts @import was blocked by CSP and never loaded. */
+
+:root {
+  --bg: #0e0e0e;
+  --surface: #141414;
+  --card: #1a1a1a;
+  --input: #222222;
+  --border: #2a2a2a;
+  --text: #e0e0e0;
+  --textDim: #888888;
+  --textMuted: #555555;
+  --accent: #22c55e;
+  --danger: #ef4444;
+  --warn: #f97316;
+
+  /* Android gesture bar / notch */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  --tab-height: 58px;
+
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter Variable', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* Stop the WebView bouncing/overscrolling like a browser */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* Touch targets: Android accessibility guidance is 48dp; 44px is the floor. */
+button,
+[role='button'] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

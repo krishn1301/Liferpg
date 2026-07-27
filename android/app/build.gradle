@@ -1,0 +1,93 @@
+apply plugin: 'com.android.application'
+
+// ── Version comes from package.json so there is one source of truth ──
+// versionCode must increase on every release Android is asked to upgrade;
+// CI passes the run number. Local builds stay at 1, which is fine because
+// local builds are never distributed.
+def pkg = new groovy.json.JsonSlurper().parseText(rootProject.file("../package.json").text)
+def appVersionName = pkg.version
+def appVersionCode = (System.getenv("VERSION_CODE") ?: "1").toInteger()
+
+// ── Signing ──
+// CI supplies these as environment variables from repository secrets.
+// Locally, drop a keystore.properties next to this project (gitignored).
+def keystorePropsFile = rootProject.file("keystore.properties")
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystoreProps.load(new FileInputStream(keystorePropsFile))
+}
+def ksPath = System.getenv("KEYSTORE_PATH") ?: keystoreProps['storeFile']
+def ksPass = System.getenv("KEYSTORE_PASSWORD") ?: keystoreProps['storePassword']
+def ksAlias = System.getenv("KEY_ALIAS") ?: keystoreProps['keyAlias']
+def ksKeyPass = System.getenv("KEY_PASSWORD") ?: keystoreProps['keyPassword']
+def hasSigning = ksPath != null && !ksPath.isEmpty() && file(ksPath).exists()
+
+if (!hasSigning) {
+    logger.warn("LifeRPG: no keystore found — release builds will be UNSIGNED and will not install.")
+}
+
+android {
+    namespace = "com.liferpg.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.liferpg.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode appVersionCode
+        versionName appVersionName
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            if (hasSigning) {
+                storeFile file(ksPath)
+                storePassword ksPass
+                keyAlias ksAlias
+                keyPassword ksKeyPass
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (hasSigning) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
