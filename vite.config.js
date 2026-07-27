@@ -46,8 +46,12 @@ export default defineConfig({
     // Android WebView on supported devices handles modern syntax fine
     target: 'es2020'
   },
+  // Vitest transforms test files with esbuild directly, bypassing plugin-react,
+  // so the automatic JSX runtime has to be set here too.
+  esbuild: { jsx: 'automatic' },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.js']
+    include: ['src/**/*.test.{js,jsx}'],
+    setupFiles: ['src/test/setup.js']
   }
 })
