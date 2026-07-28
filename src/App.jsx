@@ -5,6 +5,7 @@ import { StoreProvider, useStore } from './state/StoreProvider'
 import BottomTabs, { TABS } from './components/BottomTabs'
 import Today from './screens/Today'
 import Habits from './screens/Habits'
+import Stats from './screens/Stats'
 import Placeholder from './screens/Placeholder'
 
 export default function App() {
@@ -37,16 +38,7 @@ function Shell() {
         <Routes>
           <Route path="/" element={<Today />} />
           <Route path="/habits" element={<Habits />} />
-          <Route
-            path="/stats"
-            element={
-              <Placeholder
-                title="Stats"
-                icon="📊"
-                note="Charts, calendar heatmaps and your habit leaderboard."
-              />
-            }
-          />
+          <Route path="/stats" element={<Stats />} />
           <Route
             path="/day"
             element={
