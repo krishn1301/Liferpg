@@ -20,10 +20,13 @@ def ksPath = System.getenv("KEYSTORE_PATH") ?: keystoreProps['storeFile']
 def ksPass = System.getenv("KEYSTORE_PASSWORD") ?: keystoreProps['storePassword']
 def ksAlias = System.getenv("KEY_ALIAS") ?: keystoreProps['keyAlias']
 def ksKeyPass = System.getenv("KEY_PASSWORD") ?: keystoreProps['keyPassword']
-def hasSigning = ksPath != null && !ksPath.isEmpty() && file(ksPath).exists()
+// A keystore restored from an unset CI secret is a zero-byte file that still
+// exists, so size is part of the check — otherwise Gradle fails deep inside
+// the signing task with an error that explains nothing.
+def hasSigning = ksPath != null && !ksPath.isEmpty() && file(ksPath).exists() && file(ksPath).length() > 1000
 
 if (!hasSigning) {
-    logger.warn("LifeRPG: no keystore found — release builds will be UNSIGNED and will not install.")
+    logger.warn("LifeRPG: no usable keystore — release builds will be UNSIGNED and will not install on a device.")
 }
 
 android {
