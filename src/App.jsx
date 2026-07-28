@@ -1,135 +1,117 @@
-import { useEffect, useState } from 'react'
-import { load, save, clear, isNative, platform } from './platform/storage'
+import { useEffect } from 'react'
+import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { App as CapApp } from '@capacitor/app'
+import { StoreProvider, useStore } from './state/StoreProvider'
+import BottomTabs, { TABS } from './components/BottomTabs'
+import Today from './screens/Today'
+import Habits from './screens/Habits'
+import Placeholder from './screens/Placeholder'
 
-const VERSION = __APP_VERSION__
+export default function App() {
+  return (
+    <StoreProvider>
+      <HashRouter>
+        <AndroidBackButton />
+        <Shell />
+      </HashRouter>
+    </StoreProvider>
+  )
+}
+
+function Shell() {
+  const { ready } = useStore()
+
+  // Rendering the app against an empty document and then swapping in the real
+  // one makes every list flash. Waiting one frame for storage is cheaper.
+  if (!ready) {
+    return (
+      <div style={S.splash}>
+        <div style={{ fontSize: 42 }}>⚔️</div>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <main>
+        <Routes>
+          <Route path="/" element={<Today />} />
+          <Route path="/habits" element={<Habits />} />
+          <Route
+            path="/stats"
+            element={
+              <Placeholder
+                title="Stats"
+                icon="📊"
+                note="Charts, calendar heatmaps and your habit leaderboard."
+              />
+            }
+          />
+          <Route
+            path="/day"
+            element={
+              <Placeholder
+                title="My Day"
+                icon="🕐"
+                note="Plan your day as a timeline of blocks."
+              />
+            }
+          />
+          <Route
+            path="/more"
+            element={
+              <Placeholder
+                title="More"
+                icon="⋯"
+                note="Medicines, rewards, backup and settings."
+              />
+            }
+          />
+          <Route
+            path="*"
+            element={<Placeholder title="Not found" icon="🧭" note="That screen doesn't exist." />}
+          />
+        </Routes>
+      </main>
+      <BottomTabs />
+    </>
+  )
+}
 
 /**
- * Phase 0 smoke screen.
- *
- * This is deliberately not the real app. Its only job is to prove, on a real
- * device, that the signed APK installs, the WebView boots, the bundle loads,
- * native storage round-trips, and safe-area insets are respected. Phase 1
- * replaces this file with the router and bottom tab shell.
+ * Android's hardware back button does nothing in a WebView unless you wire it
+ * up. From a sub-screen it should go back; from a root tab it should leave the
+ * app, not strand the user on a blank history entry.
  */
-export default function App() {
-  const [status, setStatus] = useState('checking…')
-  const [count, setCount] = useState(null)
+function AndroidBackButton() {
+  const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const doc = await load()
-        const next = (doc?.launches ?? 0) + 1
-        await save({ launches: next, lastOpened: new Date().toISOString() })
-        const verify = await load()
-        if (cancelled) return
-        if (verify?.launches !== next) throw new Error('read-back mismatch')
-        setCount(next)
-        setStatus('ok')
-      } catch (err) {
-        if (!cancelled) setStatus(`FAILED: ${err.message}`)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    let remove
+    CapApp.addListener('backButton', ({ canGoBack }) => {
+      const atRoot = TABS.some((tab) => tab.to === location.pathname)
+      if (atRoot || !canGoBack) CapApp.exitApp()
+      else navigate(-1)
+    })
+      .then((handle) => {
+        remove = () => handle.remove()
+      })
+      .catch(() => {
+        // Web build — the browser's own back button already does the right thing.
+      })
 
-  const ok = status === 'ok'
+    return () => remove?.()
+  }, [navigate, location.pathname])
 
-  return (
-    <div style={styles.root}>
-      <div style={styles.badge}>⚔️</div>
-      <h1 style={styles.title}>LifeRPG</h1>
-      <p style={styles.sub}>Phase 0 — pipeline check</p>
-
-      <dl style={styles.list}>
-        <Row label="Version" value={VERSION} />
-        <Row label="Platform" value={isNative ? `native / ${platform}` : 'web'} />
-        <Row
-          label="Storage"
-          value={ok ? `ok — launch #${count}` : status}
-          tone={ok ? 'good' : status.startsWith('FAILED') ? 'bad' : 'dim'}
-        />
-      </dl>
-
-      <p style={styles.note}>
-        {ok
-          ? 'Close and reopen the app. If the launch count goes up, storage survives restarts.'
-          : 'Storage has not confirmed yet.'}
-      </p>
-
-      <button
-        style={styles.reset}
-        onClick={async () => {
-          await clear()
-          setCount(0)
-          setStatus('cleared — reopen to re-test')
-        }}
-      >
-        Reset counter
-      </button>
-    </div>
-  )
+  return null
 }
 
-function Row({ label, value, tone = 'default' }) {
-  const color = { good: 'var(--accent)', bad: 'var(--danger)', dim: 'var(--textDim)' }[tone]
-  return (
-    <div style={styles.row}>
-      <dt style={styles.dt}>{label}</dt>
-      <dd style={{ ...styles.dd, color: color || 'var(--text)' }}>{value}</dd>
-    </div>
-  )
-}
-
-const styles = {
-  root: {
-    minHeight: '100%',
-    padding: `calc(var(--safe-top) + 48px) 24px calc(var(--safe-bottom) + 24px)`,
+const S = {
+  splash: {
+    height: '100%',
     display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start'
-  },
-  badge: { fontSize: 44, marginBottom: 12 },
-  title: { fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px' },
-  sub: {
-    color: 'var(--textMuted)',
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    marginTop: 4,
-    marginBottom: 28
-  },
-  list: {
-    width: '100%',
-    border: '1px solid var(--border)',
-    background: 'var(--card)'
-  },
-  row: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: 16,
-    padding: '13px 14px',
-    borderBottom: '1px solid var(--border)'
-  },
-  dt: {
-    color: 'var(--textDim)',
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em'
-  },
-  dd: { fontSize: 13, fontWeight: 600, textAlign: 'right', wordBreak: 'break-word' },
-  note: { color: 'var(--textDim)', fontSize: 12, lineHeight: 1.6, margin: '20px 0' },
-  reset: {
-    marginTop: 'auto',
-    padding: '12px 18px',
-    border: '1px solid var(--border)',
-    color: 'var(--textDim)',
-    fontSize: 12,
-    fontWeight: 600,
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em'
+    alignItems: 'center',
+    justifyContent: 'center'
   }
 }
