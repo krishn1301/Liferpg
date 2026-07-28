@@ -104,7 +104,23 @@ function HabitSheet({ draft, onClose, onSave, onDelete }) {
   const schedule = local.schedule ?? { type: 'daily' }
 
   return (
-    <Sheet open title={local.id ? 'Edit habit' : 'New habit'} onClose={onClose}>
+    <Sheet
+      open
+      title={local.id ? 'Edit habit' : 'New habit'}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={() => onSave(local)} disabled={!local.name.trim()} style={{ flex: 1 }}>
+            {local.id ? 'Save' : 'Add habit'}
+          </Button>
+          {onDelete && (
+            <Button variant="danger" onClick={onDelete}>
+              Delete
+            </Button>
+          )}
+        </>
+      }
+    >
       <Field label="Name">
         <input
           style={inputStyle}
@@ -149,17 +165,6 @@ function HabitSheet({ draft, onClose, onSave, onDelete }) {
       <Field label="Repeat">
         <ScheduleEditor schedule={schedule} onChange={(s) => set({ schedule: s })} />
       </Field>
-
-      <div style={S.actions}>
-        <Button onClick={() => onSave(local)} disabled={!local.name.trim()} style={{ flex: 1 }}>
-          {local.id ? 'Save' : 'Add habit'}
-        </Button>
-        {onDelete && (
-          <Button variant="danger" onClick={onDelete}>
-            Delete
-          </Button>
-        )}
-      </div>
     </Sheet>
   )
 }
@@ -287,6 +292,5 @@ const S = {
     fontSize: 13,
     fontWeight: 700
   },
-  scheduleHint: { fontSize: 12, color: 'var(--textDim)', marginTop: 10 },
-  actions: { display: 'flex', gap: 8, marginTop: 24 }
+  scheduleHint: { fontSize: 12, color: 'var(--textDim)', marginTop: 10 }
 }

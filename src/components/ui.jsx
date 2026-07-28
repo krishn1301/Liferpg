@@ -44,8 +44,15 @@ export function EmptyState({ icon, title, hint, action }) {
   )
 }
 
-/** Bottom sheet — the mobile replacement for the desktop app's inline forms. */
-export function Sheet({ open, title, onClose, children }) {
+/**
+ * Bottom sheet — the mobile replacement for the desktop app's inline forms.
+ *
+ * `footer` is pinned to the bottom of the sheet's own scroll area. On a real
+ * phone the on-screen keyboard swallows most of the sheet, and a primary action
+ * sitting at the end of the form ends up below the fold with no hint it exists.
+ * Anything the user must be able to press belongs in `footer`, not `children`.
+ */
+export function Sheet({ open, title, onClose, footer, children }) {
   if (!open) return null
   return (
     <>
@@ -58,6 +65,7 @@ export function Sheet({ open, title, onClose, children }) {
           </button>
         </div>
         <div style={S.sheetBody}>{children}</div>
+        {footer && <div style={S.sheetFooter}>{footer}</div>}
       </div>
     </>
   )
@@ -164,6 +172,15 @@ const S = {
   },
   sheetClose: { color: 'var(--textDim)', fontSize: 16 },
   sheetBody: { padding: 16 },
+  sheetFooter: {
+    position: 'sticky',
+    bottom: 0,
+    background: 'var(--surface)',
+    borderTop: '1px solid var(--border)',
+    padding: '12px 16px',
+    display: 'flex',
+    gap: 8
+  },
   field: { display: 'block', marginBottom: 16 },
   fieldLabel: {
     display: 'block',
