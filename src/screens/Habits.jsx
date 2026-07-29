@@ -23,7 +23,9 @@ export default function Habits() {
     if (draft.id) {
       dispatch({ type: 'habit/update', id: draft.id, changes: draft })
     } else {
-      dispatch({ type: 'habit/add', habit: draft })
+      // The screen owns the clock, not the reducer — `today` here already
+      // survives a midnight rollover with the app left open.
+      dispatch({ type: 'habit/add', habit: draft, todayKey: today })
     }
     setEditing(null)
   }

@@ -6,6 +6,11 @@ import BottomTabs, { TABS } from './components/BottomTabs'
 import Today from './screens/Today'
 import Habits from './screens/Habits'
 import Stats from './screens/Stats'
+import MyDay from './screens/MyDay'
+import More from './screens/More'
+import Calendar from './screens/Calendar'
+import Medicines from './screens/Medicines'
+import Settings from './screens/Settings'
 import Placeholder from './screens/Placeholder'
 
 export default function App() {
@@ -39,26 +44,11 @@ function Shell() {
           <Route path="/" element={<Today />} />
           <Route path="/habits" element={<Habits />} />
           <Route path="/stats" element={<Stats />} />
-          <Route
-            path="/day"
-            element={
-              <Placeholder
-                title="My Day"
-                icon="🕐"
-                note="Plan your day as a timeline of blocks."
-              />
-            }
-          />
-          <Route
-            path="/more"
-            element={
-              <Placeholder
-                title="More"
-                icon="⋯"
-                note="Medicines, rewards, backup and settings."
-              />
-            }
-          />
+          <Route path="/day" element={<MyDay />} />
+          <Route path="/more" element={<More />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/medicines" element={<Medicines />} />
+          <Route path="/settings" element={<Settings />} />
           <Route
             path="*"
             element={<Placeholder title="Not found" icon="🧭" note="That screen doesn't exist." />}

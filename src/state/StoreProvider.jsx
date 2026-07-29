@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { App as CapApp } from '@capacitor/app'
 import { load, createDebouncedSaver } from '../platform/storage'
+import { applyTheme } from '../theme/tokens'
 import { reducer, emptyDoc, migrate } from './reducer'
 
 const StoreContext = createContext(null)
@@ -17,7 +18,13 @@ export function StoreProvider({ children }) {
     load()
       .then((stored) => {
         if (cancelled) return
-        if (stored) dispatch({ type: 'doc/replace', doc: migrate(stored) })
+        if (!stored) return
+        const doc = migrate(stored)
+        dispatch({ type: 'doc/replace', doc })
+        // main.jsx applies the dark default synchronously so the first paint is
+        // never a white flash. The stored preference can only land here, once
+        // storage has actually answered.
+        applyTheme(doc.settings.theme)
       })
       .catch((err) => console.error('Failed to load store:', err))
       .finally(() => {

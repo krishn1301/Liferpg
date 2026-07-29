@@ -35,13 +35,35 @@ export function normalizeSchedule(schedule) {
 }
 
 /**
+ * Did this habit exist yet on this day?
+ *
+ * A habit created today has not missed the past month. Without this the
+ * calendar paints every day back to the 1st as a miss, and a habit added
+ * five minutes ago reports a 3% completion rate over 30 days — numbers that
+ * describe days it did not exist for.
+ *
+ * A habit with no `createdKey` is treated as always having existed. That is
+ * the honest answer for a document written before the field did: guessing a
+ * start date would silently rewrite someone's history.
+ */
+export function existedOn(habit, dateKey) {
+  return !habit?.createdKey || dateKey >= habit.createdKey
+}
+
+/**
  * Is this habit expected on this day?
  *
  * `weekly` habits ("3 times a week") are due every day in the sense that you
  * may do them on any day — the target is enforced per week by the streak
  * logic, not per day.
+ *
+ * Creation date is folded in here rather than at each call site, because every
+ * denominator in the app runs through this predicate and one of them forgetting
+ * is exactly how the desktop app's percentages drifted apart.
  */
 export function isDueOn(habit, dateKey) {
+  if (!existedOn(habit, dateKey)) return false
+
   const schedule = normalizeSchedule(habit?.schedule)
   switch (schedule.type) {
     case SCHEDULE_TYPES.weekdays:
