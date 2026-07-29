@@ -63,6 +63,28 @@ export function daysInMonth(year, monthIndex) {
   return new Date(year, monthIndex + 1, 0).getDate()
 }
 
+/** Every date key in a month, in order. */
+export function monthKeys(year, monthIndex) {
+  const n = daysInMonth(year, monthIndex)
+  return Array.from({ length: n }, (_, i) => `${year}-${pad(monthIndex + 1)}-${pad(i + 1)}`)
+}
+
+/**
+ * How many blank cells precede the 1st in a Monday-first month grid.
+ * Sunday is 0 in `getDay`, so it has to wrap to the end of the week, not the
+ * start — off by one here shifts every date in the grid by a day.
+ */
+export function leadingBlanks(year, monthIndex) {
+  const dow = new Date(year, monthIndex, 1).getDay()
+  return dow === 0 ? 6 : dow - 1
+}
+
+/** Shift a year/month pair by whole months, handling year rollover. */
+export function addMonths(year, monthIndex, delta) {
+  const d = new Date(year, monthIndex + delta, 1)
+  return { year: d.getFullYear(), monthIndex: d.getMonth() }
+}
+
 /**
  * Milliseconds until the next local midnight.
  *

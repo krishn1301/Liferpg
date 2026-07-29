@@ -1,4 +1,5 @@
 import { normalizeSchedule } from '../domain/schedule'
+import { todayKey } from '../domain/dates'
 import { MAX_HABITS } from '../domain/constants'
 
 // The entire app is one plain document. Every change goes through this reducer,
@@ -32,7 +33,10 @@ export function migrate(raw) {
     ...raw,
     version: DOC_VERSION,
     settings: { ...base.settings, ...(raw.settings ?? {}) },
-    habits: (raw.habits ?? []).map(normalizeHabit)
+    habits: (raw.habits ?? []).map(normalizeHabit),
+    medicines: (raw.medicines ?? []).map(normalizeMedicine),
+    routineBlocks: sortBlocks((raw.routineBlocks ?? []).map(normalizeBlock)),
+    dailyLogs: raw.dailyLogs ?? {}
   }
 }
 
@@ -43,11 +47,39 @@ function normalizeHabit(habit) {
     completions: {},
     skips: {},
     reminders: [],
+    createdKey: null,
     ...habit,
     // Habits written before schedules existed have no `schedule` field at all.
     schedule: normalizeSchedule(habit.schedule)
   }
 }
+
+function normalizeMedicine(med) {
+  return {
+    dose: '',
+    icon: '💊',
+    archived: false,
+    startKey: null,
+    endKey: null,
+    ...med,
+    // Deduped and ordered so two medicines with the same times compare equal,
+    // and so the UI never renders the same dose twice.
+    times: [...new Set(med.times ?? [])],
+    schedule: normalizeSchedule(med.schedule)
+  }
+}
+
+function normalizeBlock(block) {
+  const start = block.start ?? '08:00'
+  let end = block.end ?? '09:00'
+  // A block that ends before it starts renders as negative height and sorts
+  // wrongly. Clamp rather than reject — the user is mid-edit, not wrong.
+  if (end < start) end = start
+  return { category: 'personal', note: '', ...block, start, end }
+}
+
+const sortBlocks = (blocks) =>
+  [...blocks].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end))
 
 /** Ids only need to be unique within one device's document. */
 export function newId() {
@@ -61,7 +93,13 @@ export function reducer(doc, action) {
 
     case 'habit/add': {
       if (doc.habits.length >= MAX_HABITS) return doc
-      return { ...doc, habits: [...doc.habits, normalizeHabit({ id: newId(), ...action.habit })] }
+      return {
+        ...doc,
+        habits: [
+          ...doc.habits,
+          normalizeHabit({ id: newId(), createdKey: action.todayKey ?? todayKey(), ...action.habit })
+        ]
+      }
     }
 
     case 'habit/update':
@@ -115,9 +153,71 @@ export function reducer(doc, action) {
           ...doc.habits,
           ...action.habits
             .slice(0, Math.max(0, MAX_HABITS - doc.habits.length))
-            .map((h) => normalizeHabit({ id: newId(), ...h }))
+            .map((h) => normalizeHabit({ id: newId(), createdKey: action.todayKey ?? todayKey(), ...h }))
         ]
       }
+
+    case 'med/add':
+      return {
+        ...doc,
+        medicines: [
+          ...doc.medicines,
+          normalizeMedicine({
+            id: newId(),
+            ...action.medicine,
+            // A medicine added today has not missed yesterday's dose. The course
+            // starts today unless the user says otherwise, which keeps the days
+            // before it existed out of the adherence denominator.
+            startKey: action.medicine.startKey ?? action.todayKey ?? todayKey()
+          })
+        ]
+      }
+
+    case 'med/update':
+      return {
+        ...doc,
+        medicines: doc.medicines.map((m) =>
+          m.id === action.id ? normalizeMedicine({ ...m, ...action.changes }) : m
+        )
+      }
+
+    case 'med/delete':
+      return { ...doc, medicines: doc.medicines.filter((m) => m.id !== action.id) }
+
+    case 'med/toggleDose': {
+      const log = doc.dailyLogs[action.dateKey] ?? {}
+      const meds = { ...(log.meds ?? {}) }
+      // Same rule as habit completions: absent means not taken. Storing `false`
+      // would create two spellings of the same fact.
+      if (meds[action.doseId]) delete meds[action.doseId]
+      else meds[action.doseId] = true
+      return {
+        ...doc,
+        dailyLogs: { ...doc.dailyLogs, [action.dateKey]: { ...log, meds } }
+      }
+    }
+
+    case 'block/add':
+      return {
+        ...doc,
+        routineBlocks: sortBlocks([
+          ...doc.routineBlocks,
+          normalizeBlock({ id: newId(), ...action.block })
+        ])
+      }
+
+    case 'block/update':
+      return {
+        ...doc,
+        routineBlocks: sortBlocks(
+          doc.routineBlocks.map((b) =>
+            b.id === action.id ? normalizeBlock({ ...b, ...action.changes }) : b
+          )
+        )
+      }
+
+    case 'block/delete':
+      return { ...doc, routineBlocks: doc.routineBlocks.filter((b) => b.id !== action.id) }
 
     case 'log/set':
       return {

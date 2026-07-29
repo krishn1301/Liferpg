@@ -6,7 +6,12 @@
       {
         "rule": "side-tab",
         "value": "*",
-        "files": ["src/screens/Today.jsx", "src/screens/Habits.jsx"],
+        "files": [
+          "src/screens/Today.jsx",
+          "src/screens/Habits.jsx",
+          "src/screens/Calendar.jsx",
+          "src/screens/MyDay.jsx"
+        ],
         "createdAt": "2026-07-29T00:00:00.000Z",
         "reason": "The 3px category stripe is the app's inherited identity, carried over from the LifeRPG desktop build, and it is the only place a habit's category is encoded as colour. In a zero-radius monochrome UI with no other chrome it is the load-bearing signal, not decoration. Reviewed and kept deliberately."
       },
