@@ -27,7 +27,7 @@ function Shell() {
   if (!ready) {
     return (
       <div style={S.splash}>
-        <div style={{ fontSize: 42 }}>⚔️</div>
+        <div style={{ fontSize: 'var(--fs-4xl)' }}>⚔️</div>
       </div>
     )
   }

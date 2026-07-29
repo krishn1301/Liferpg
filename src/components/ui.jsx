@@ -1,6 +1,10 @@
 // Shared primitives. The design language is the desktop app's: blocky, zero
 // border-radius, monochrome, one emerald accent. Colours come from CSS custom
 // properties so the light/dark swap is a single attribute on <html>.
+//
+// Font sizes are `var(--fs-*)` tokens, never numbers. A bare number in a React
+// style object becomes px, and px text ignores every text-size preference the
+// user has — see the type scale in theme/global.css.
 
 export function Screen({ title, subtitle, action, children }) {
   return (
@@ -36,8 +40,8 @@ export function Button({ children, variant = 'primary', style, ...rest }) {
 export function EmptyState({ icon, title, hint, action }) {
   return (
     <div style={S.empty}>
-      <div style={{ fontSize: 40, marginBottom: 12 }}>{icon}</div>
-      <div style={{ fontSize: 15, fontWeight: 700 }}>{title}</div>
+      <div style={{ fontSize: 'var(--fs-4xl)', marginBottom: 12 }}>{icon}</div>
+      <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700 }}>{title}</div>
       {hint && <div style={S.emptyHint}>{hint}</div>}
       {action && <div style={{ marginTop: 18 }}>{action}</div>}
     </div>
@@ -85,8 +89,9 @@ export const inputStyle = {
   border: '1px solid var(--border)',
   color: 'var(--text)',
   padding: '12px 14px',
-  fontSize: 15,
+  fontSize: 'var(--fs-base)',
   width: '100%',
+  minHeight: 'var(--touch)',
   outline: 'none',
   borderRadius: 0
 }
@@ -104,10 +109,10 @@ const S = {
     gap: 12,
     marginBottom: 22
   },
-  title: { fontSize: 26, fontWeight: 800, letterSpacing: '-0.4px' },
-  subtitle: { color: 'var(--textDim)', fontSize: 13, marginTop: 4 },
+  title: { fontSize: 'var(--fs-2xl)', fontWeight: 800, letterSpacing: '-0.02em' },
+  subtitle: { color: 'var(--textDim)', fontSize: 'var(--fs-md)', marginTop: 4 },
   sectionTitle: {
-    fontSize: 10,
+    fontSize: 'var(--fs-2xs)',
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.12em',
@@ -121,7 +126,7 @@ const S = {
   },
   button: {
     padding: '11px 18px',
-    fontSize: 12,
+    fontSize: 'var(--fs-sm)',
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
@@ -129,12 +134,12 @@ const S = {
     whiteSpace: 'nowrap'
   },
   buttonVariants: {
-    primary: { background: 'var(--accent)', color: '#04140a' },
+    primary: { background: 'var(--accent)', color: 'var(--onAccent)' },
     ghost: { background: 'transparent', color: 'var(--textDim)', border: '1px solid var(--border)' },
     danger: { background: 'transparent', color: 'var(--danger)', border: '1px solid var(--danger)' }
   },
   empty: { textAlign: 'center', padding: '56px 16px', color: 'var(--textMuted)' },
-  emptyHint: { fontSize: 13, marginTop: 6, lineHeight: 1.6, color: 'var(--textDim)' },
+  emptyHint: { fontSize: 'var(--fs-md)', marginTop: 6, lineHeight: 1.6, color: 'var(--textDim)' },
   scrim: {
     position: 'fixed',
     inset: 0,
@@ -164,13 +169,13 @@ const S = {
     background: 'var(--surface)'
   },
   sheetTitle: {
-    fontSize: 11,
+    fontSize: 'var(--fs-xs)',
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     color: 'var(--textDim)'
   },
-  sheetClose: { color: 'var(--textDim)', fontSize: 16 },
+  sheetClose: { color: 'var(--textDim)', fontSize: 'var(--fs-base)' },
   sheetBody: { padding: 16 },
   sheetFooter: {
     position: 'sticky',
@@ -184,7 +189,7 @@ const S = {
   field: { display: 'block', marginBottom: 16 },
   fieldLabel: {
     display: 'block',
-    fontSize: 10,
+    fontSize: 'var(--fs-2xs)',
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.08em',

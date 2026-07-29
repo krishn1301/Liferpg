@@ -87,7 +87,7 @@ export default function Stats() {
       <div style={S.badges}>
         {badges.map((badge) => (
           <div key={badge.id} style={{ ...S.badge, opacity: badge.earned ? 1 : 0.32 }}>
-            <div style={{ fontSize: 22 }}>{badge.icon}</div>
+            <div style={{ fontSize: 'var(--fs-xl)' }}>{badge.icon}</div>
             <div style={S.badgeLabel}>{badge.label}</div>
             <div style={S.badgeDesc}>{badge.desc}</div>
           </div>
@@ -108,7 +108,7 @@ function RangePicker({ value, onChange }) {
           style={{
             ...S.segment,
             background: value === range.days ? 'var(--accent)' : 'transparent',
-            color: value === range.days ? '#04140a' : 'var(--textDim)'
+            color: value === range.days ? 'var(--onAccent)' : 'var(--textDim)'
           }}
         >
           {range.label}
@@ -144,7 +144,7 @@ function Trend({ trend }) {
               style={{
                 ...S.trendBar,
                 // A day with nothing scheduled is not a 0% day — show it hollow.
-                height: day.due ? `${Math.max(day.pct, 3)}%` : '3%',
+                transform: `scaleY(${day.due ? Math.max(day.pct, 3) / 100 : 0.03})`,
                 background: day.due ? 'var(--accent)' : 'var(--border)',
                 opacity: day.due ? 0.35 + (day.pct / 100) * 0.65 : 1
               }}
@@ -174,7 +174,7 @@ function Bar({ label, color, pct, note, trailing }) {
         </span>
       </div>
       <div style={S.barTrack}>
-        <div style={{ ...S.barFill, width: `${pct}%`, background: color }} />
+        <div style={{ ...S.barFill, transform: `scaleX(${pct / 100})`, background: color }} />
       </div>
       <div style={S.barNote}>{note}</div>
     </div>
@@ -184,9 +184,8 @@ function Bar({ label, color, pct, note, trailing }) {
 const S = {
   segmented: { display: 'flex', border: '1px solid var(--border)' },
   segment: {
-    minWidth: 44,
     padding: '8px 10px',
-    fontSize: 11,
+    fontSize: 'var(--fs-xs)',
     fontWeight: 700,
     letterSpacing: '0.04em'
   },
@@ -197,9 +196,9 @@ const S = {
     padding: '14px 10px',
     textAlign: 'center'
   },
-  tileValue: { fontSize: 22, fontWeight: 800, lineHeight: 1.1 },
+  tileValue: { fontSize: 'var(--fs-xl)', fontWeight: 800, lineHeight: 1.1 },
   tileLabel: {
-    fontSize: 9,
+    fontSize: 'var(--fs-3xs)',
     fontWeight: 600,
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
@@ -208,11 +207,13 @@ const S = {
   },
   trendRow: { display: 'flex', alignItems: 'flex-end', gap: 2, height: 72 },
   trendCol: { flex: 1, height: '100%', display: 'flex', alignItems: 'flex-end' },
-  trendBar: { width: '100%', minHeight: 2, transition: 'height 0.3s' },
+  // Full-height bar scaled down from its base, rather than a short bar grown
+  // taller: animating `height` relayouts all 90 columns on every range switch.
+  trendBar: { width: '100%', height: '100%', transformOrigin: 'bottom', transition: 'transform 0.3s' },
   trendAxis: { display: 'flex', gap: 2, marginTop: 6 },
   trendTick: {
     flex: 1,
-    fontSize: 8,
+    fontSize: 'var(--fs-3xs)',
     color: 'var(--textMuted)',
     textAlign: 'center',
     overflow: 'hidden'
@@ -225,17 +226,17 @@ const S = {
   },
   barHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 },
   barLabel: {
-    fontSize: 13,
+    fontSize: 'var(--fs-md)',
     fontWeight: 600,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap'
   },
-  barPct: { fontSize: 12, fontWeight: 700, flexShrink: 0 },
+  barPct: { fontSize: 'var(--fs-sm)', fontWeight: 700, flexShrink: 0 },
   barStreak: { color: 'var(--warn)' },
-  barTrack: { height: 4, background: 'var(--bg)', margin: '8px 0 5px' },
-  barFill: { height: '100%', transition: 'width 0.4s' },
-  barNote: { fontSize: 10, color: 'var(--textMuted)' },
+  barTrack: { height: 4, background: 'var(--bg)', margin: '8px 0 5px', overflow: 'hidden' },
+  barFill: { height: '100%', width: '100%', transformOrigin: 'left', transition: 'transform 0.4s' },
+  barNote: { fontSize: 'var(--fs-2xs)', color: 'var(--textMuted)' },
   badges: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 },
   badge: {
     background: 'var(--card)',
@@ -243,6 +244,6 @@ const S = {
     padding: '14px 8px',
     textAlign: 'center'
   },
-  badgeLabel: { fontSize: 10, fontWeight: 700, marginTop: 7 },
-  badgeDesc: { fontSize: 9, color: 'var(--textMuted)', marginTop: 3 }
+  badgeLabel: { fontSize: 'var(--fs-2xs)', fontWeight: 700, marginTop: 7 },
+  badgeDesc: { fontSize: 'var(--fs-3xs)', color: 'var(--textMuted)', marginTop: 3 }
 }
