@@ -25,12 +25,19 @@ vi.mock('@capacitor/haptics', () => ({
   Haptics: { impact: async () => {}, notification: async () => {} },
   ImpactStyle: { Light: 'LIGHT', Medium: 'MEDIUM', Heavy: 'HEAVY' }
 }))
+vi.mock('@capacitor/filesystem', () => ({
+  Filesystem: { writeFile: async () => ({ uri: 'file:///fake' }) },
+  Directory: { Documents: 'DOCUMENTS' },
+  Encoding: { UTF8: 'utf8' }
+}))
+vi.mock('@capacitor/share', () => ({ Share: { share: async () => {} } }))
 
 vi.stubGlobal('__APP_VERSION__', '0.0.1-test')
 
 const { default: App } = await import('./App')
 
-async function render() {
+async function render(hash = '') {
+  window.location.hash = hash
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
@@ -39,6 +46,13 @@ async function render() {
 }
 
 const click = async (el) => act(async () => el.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+
+/** Put a File on a file input. jsdom has no DataTransfer to build a FileList with. */
+const setFiles = (input, file) =>
+  Object.defineProperty(input, 'files', {
+    value: Object.assign([file], { item: (i) => [file][i] }),
+    configurable: true
+  })
 
 describe('App', () => {
   beforeEach(() => {
@@ -95,5 +109,107 @@ describe('App', () => {
     expect(second.container.textContent).toContain('10 XP')
     expect(second.container.textContent).toContain('100%')
     second.unmount()
+  })
+})
+
+// Every route mounted at least once. A screen that throws on first render is
+// the exact failure the tests above exist to prevent, and a new screen only
+// reachable behind two taps is easy to ship broken.
+describe('every route renders', () => {
+  beforeEach(() => store.clear())
+
+  const routes = [
+    ['#/', 'Good'],
+    ['#/habits', 'Habits'],
+    ['#/stats', 'Stats'],
+    ['#/day', 'My Day'],
+    ['#/more', 'More'],
+    ['#/calendar', 'Calendar'],
+    ['#/medicines', 'Medicines'],
+    ['#/settings', 'Settings']
+  ]
+
+  for (const [hash, expected] of routes) {
+    it(`mounts ${hash} without throwing`, async () => {
+      const { container, unmount } = await render(hash)
+      expect(container.textContent).toContain(expected)
+      unmount()
+    })
+  }
+
+  it('shows the not-found screen for an unknown route', async () => {
+    const { container, unmount } = await render('#/nope')
+    expect(container.textContent).toContain('Not found')
+    unmount()
+  })
+})
+
+describe('importing a desktop save through the real UI', () => {
+  beforeEach(() => store.clear())
+
+  const DESKTOP_SAVE = JSON.stringify({
+    habits: [
+      {
+        id: 1778145267136,
+        name: 'Tuition',
+        category: 'personal',
+        icon: '📚',
+        streak: 0,
+        completions: { '2026-05-04': true, '2026-05-05': false, '2026-04-30': true },
+        target: 'daily',
+        xpBonus: 1
+      }
+    ],
+    xp: 190,
+    lastUpdated: '2026-05-07T10:28:56.426Z'
+  })
+
+  it('explains the XP correction, then imports on confirm', async () => {
+    const { container, unmount } = await render('#/settings')
+
+    const input = container.querySelector('input[type="file"]')
+    const file = new File([DESKTOP_SAVE], 'liferpg-data.json', { type: 'application/json' })
+
+    await act(async () => {
+      // jsdom has no DataTransfer, and the handler only ever reads files[0].
+      setFiles(input, file)
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+      // Let FileReader's async callback land before assertions.
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    // The sheet must name both numbers before anything is replaced: two live
+    // completions earn 20 XP, while the file claims 190.
+    expect(container.textContent).toContain('Import from desktop')
+    expect(container.textContent).toContain('190')
+    expect(container.textContent).toContain('20 XP')
+
+    await click(
+      [...container.querySelectorAll('button')].find((b) => b.textContent === 'Replace my data')
+    )
+
+    expect(container.textContent).toContain('Desktop data imported.')
+    unmount()
+
+    // And it survives a restart, which is the whole point of importing.
+    const reopened = await render('#/habits')
+    expect(reopened.container.textContent).toContain('Tuition')
+    reopened.unmount()
+  })
+
+  it('rejects a file that is not JSON without replacing anything', async () => {
+    const { container, unmount } = await render('#/settings')
+
+    const input = container.querySelector('input[type="file"]')
+
+    await act(async () => {
+      setFiles(input, new File(['not json'], 'junk.json', { type: 'application/json' }))
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    expect(container.textContent).toContain("isn't valid JSON")
+    expect(container.textContent).not.toContain('Replace my data')
+    unmount()
   })
 })
