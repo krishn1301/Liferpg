@@ -58,7 +58,7 @@ export default function Habits() {
                 onClick={() => setEditing({ ...habit })}
                 style={{ ...S.row, borderLeft: `3px solid ${cat.color}` }}
               >
-                <span style={{ fontSize: 20 }}>{habit.icon}</span>
+                <span style={{ fontSize: 'var(--fs-xl)' }}>{habit.icon}</span>
                 <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                   <div style={S.name}>{habit.name}</div>
                   <div style={S.meta}>
@@ -194,7 +194,7 @@ function ScheduleEditor({ schedule, onChange }) {
             style={{
               ...S.segment,
               background: type === opt.key ? 'var(--accent)' : 'transparent',
-              color: type === opt.key ? '#04140a' : 'var(--textDim)'
+              color: type === opt.key ? 'var(--onAccent)' : 'var(--textDim)'
             }}
           >
             {opt.label}
@@ -219,7 +219,7 @@ function ScheduleEditor({ schedule, onChange }) {
                 style={{
                   ...S.dayBtn,
                   background: on ? 'var(--accent)' : 'transparent',
-                  color: on ? '#04140a' : 'var(--textDim)',
+                  color: on ? 'var(--onAccent)' : 'var(--textDim)',
                   borderColor: on ? 'var(--accent)' : 'var(--border)'
                 }}
               >
@@ -239,7 +239,7 @@ function ScheduleEditor({ schedule, onChange }) {
               style={{
                 ...S.dayBtn,
                 background: schedule.timesPerWeek === n ? 'var(--accent)' : 'transparent',
-                color: schedule.timesPerWeek === n ? '#04140a' : 'var(--textDim)',
+                color: schedule.timesPerWeek === n ? 'var(--onAccent)' : 'var(--textDim)',
                 borderColor: schedule.timesPerWeek === n ? 'var(--accent)' : 'var(--border)'
               }}
             >
@@ -264,14 +264,24 @@ const S = {
     padding: '12px 14px',
     width: '100%'
   },
-  name: { fontSize: 15, fontWeight: 600, color: 'var(--text)' },
-  meta: { fontSize: 11, color: 'var(--textDim)', marginTop: 3 },
-  streak: { fontSize: 13, fontWeight: 700, color: 'var(--warn)' },
-  capNote: { color: 'var(--textMuted)', fontSize: 12, marginTop: 14, textAlign: 'center' },
-  iconGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(46px, 1fr))', gap: 6 },
+  name: { fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--text)' },
+  meta: { fontSize: 'var(--fs-xs)', color: 'var(--textDim)', marginTop: 3 },
+  streak: { fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--warn)' },
+  capNote: {
+    color: 'var(--textMuted)',
+    fontSize: 'var(--fs-sm)',
+    marginTop: 14,
+    textAlign: 'center'
+  },
+  // Track floor matches --touch so the 48dp button can't overflow its cell.
+  iconGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(var(--touch), 1fr))',
+    gap: 6
+  },
   iconBtn: {
-    height: 46,
-    fontSize: 20,
+    height: 'var(--touch)',
+    fontSize: 'var(--fs-xl)',
     border: '1px solid',
     background: 'var(--input)'
   },
@@ -279,7 +289,7 @@ const S = {
   segment: {
     flex: 1,
     padding: '11px 4px',
-    fontSize: 11,
+    fontSize: 'var(--fs-xs)',
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.04em'
@@ -287,10 +297,13 @@ const S = {
   dayRow: { display: 'flex', gap: 6, marginTop: 10 },
   dayBtn: {
     flex: 1,
-    height: 44,
+    // Seven of these sit in one row; min-width has to yield or they overflow
+    // the sheet. Height still carries the 48dp target.
+    minWidth: 0,
+    height: 'var(--touch)',
     border: '1px solid',
-    fontSize: 13,
+    fontSize: 'var(--fs-md)',
     fontWeight: 700
   },
-  scheduleHint: { fontSize: 12, color: 'var(--textDim)', marginTop: 10 }
+  scheduleHint: { fontSize: 'var(--fs-sm)', color: 'var(--textDim)', marginTop: 10 }
 }

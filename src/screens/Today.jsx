@@ -39,7 +39,7 @@ export default function Today() {
           <span style={S.xpText}>{xp} XP</span>
         </div>
         <div style={S.barTrack}>
-          <div style={{ ...S.barFill, width: `${(level.current / level.needed) * 100}%` }} />
+          <div style={{ ...S.barFill, transform: `scaleX(${level.current / level.needed})` }} />
         </div>
         <div style={S.levelSub}>
           {level.current} / {level.needed} to level {level.level + 1}
@@ -116,7 +116,7 @@ function HabitRow({ habit, today, onToggle }) {
           ...S.check,
           background: isDone ? 'var(--accent)' : 'transparent',
           borderColor: isDone ? 'var(--accent)' : 'var(--border)',
-          color: isDone ? '#04140a' : 'transparent'
+          color: isDone ? 'var(--onAccent)' : 'transparent'
         }}
       >
         ✓
@@ -139,22 +139,30 @@ const S = {
     color: 'var(--accent)',
     border: '1px solid var(--accent)',
     padding: '2px 9px',
-    fontSize: 11,
+    fontSize: 'var(--fs-xs)',
     fontWeight: 700,
     letterSpacing: '0.05em'
   },
   xpText: {
     color: 'var(--textDim)',
-    fontSize: 10,
+    fontSize: 'var(--fs-2xs)',
     textTransform: 'uppercase',
     letterSpacing: '0.08em'
   },
-  barTrack: { height: 4, background: 'var(--bg)', margin: '10px 0 6px' },
-  barFill: { height: '100%', background: 'var(--accent)', transition: 'width 0.4s' },
-  levelSub: { color: 'var(--textMuted)', fontSize: 10 },
+  barTrack: { height: 4, background: 'var(--bg)', margin: '10px 0 6px', overflow: 'hidden' },
+  // Scaled, not resized: animating `width` relayouts the card on every XP
+  // change, while a transform stays on the compositor.
+  barFill: {
+    height: '100%',
+    width: '100%',
+    background: 'var(--accent)',
+    transformOrigin: 'left',
+    transition: 'transform 0.4s'
+  },
+  levelSub: { color: 'var(--textMuted)', fontSize: 'var(--fs-2xs)' },
   progressCard: { padding: 14, display: 'flex', alignItems: 'baseline', gap: 10 },
-  progressNum: { fontSize: 30, fontWeight: 800, color: 'var(--accent)' },
-  progressLabel: { fontSize: 12, color: 'var(--textDim)' },
+  progressNum: { fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--accent)' },
+  progressLabel: { fontSize: 'var(--fs-sm)', color: 'var(--textDim)' },
   list: { display: 'flex', flexDirection: 'column', gap: 8 },
   row: {
     display: 'flex',
@@ -164,16 +172,18 @@ const S = {
     border: '1px solid var(--border)',
     padding: '12px 14px'
   },
-  rowIcon: { fontSize: 20, flexShrink: 0 },
-  rowName: { fontSize: 15, fontWeight: 600 },
-  rowMeta: { fontSize: 11, color: 'var(--textDim)', marginTop: 3 },
+  rowIcon: { fontSize: 'var(--fs-xl)', flexShrink: 0 },
+  rowName: { fontSize: 'var(--fs-base)', fontWeight: 600 },
+  rowMeta: { fontSize: 'var(--fs-xs)', color: 'var(--textDim)', marginTop: 3 },
   check: {
-    width: 40,
-    height: 40,
+    // The single most-tapped control in the app — it gets the full 48dp box.
+    width: 'var(--touch)',
+    height: 'var(--touch)',
     flexShrink: 0,
     border: '2px solid',
-    fontSize: 17,
+    fontSize: 'var(--fs-lg)',
     fontWeight: 800,
-    transition: 'all 0.15s'
+    // `all` would sweep in width/height too; only the painted properties move.
+    transition: 'background-color 0.15s, border-color 0.15s, color 0.15s'
   }
 }

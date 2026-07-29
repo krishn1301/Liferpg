@@ -1,36 +1,14 @@
-// Design tokens carried over from the original LifeRPG desktop styles.js:
-// blocky, monochrome, zero border-radius, a single emerald accent.
-// Emitted as CSS custom properties so light/dark is one attribute swap.
+// Category colours and the theme switch.
+//
+// The palettes themselves live in global.css, as `:root` and
+// `:root[data-theme='light']`. They used to be duplicated here as JS objects
+// that applyTheme wrote back as inline custom properties, which meant two
+// sources of truth where the inline copy silently won. Now this file only
+// flips the attribute and lets the stylesheet do the work.
 
-export const dark = {
-  bg: '#0e0e0e',
-  surface: '#141414',
-  card: '#1a1a1a',
-  input: '#222222',
-  border: '#2a2a2a',
-  text: '#e0e0e0',
-  textDim: '#888888',
-  textMuted: '#555555',
-  accent: '#22c55e',
-  danger: '#ef4444',
-  warn: '#f97316'
-}
-
-export const light = {
-  bg: '#f5f5f4',
-  surface: '#ffffff',
-  card: '#ffffff',
-  input: '#f0f0ef',
-  border: '#d9d9d6',
-  text: '#1a1a1a',
-  textDim: '#6b6b68',
-  textMuted: '#9a9a96',
-  accent: '#16a34a',
-  danger: '#dc2626',
-  warn: '#ea580c'
-}
-
-// Per-habit category colours. Identical in both themes so a habit keeps its identity.
+// Per-habit category colours. Identical in both themes so a habit keeps its
+// identity. These stay in JS because they are data — habits reference them by
+// key — not theme chrome.
 export const CATEGORY_COLORS = {
   fitness: '#f97316',
   education: '#8b5cf6',
@@ -42,12 +20,16 @@ export const CATEGORY_COLORS = {
   creative: '#e11d48'
 }
 
+export const THEMES = ['dark', 'light']
+
+/**
+ * Switch theme. Reads --bg back out of the cascade rather than keeping a copy,
+ * so the Android status bar colour can never drift from the actual background.
+ */
 export function applyTheme(mode) {
-  const palette = mode === 'light' ? light : dark
   const root = document.documentElement
-  for (const [key, value] of Object.entries(palette)) {
-    root.style.setProperty(`--${key}`, value)
-  }
-  root.dataset.theme = mode
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', palette.bg)
+  root.dataset.theme = THEMES.includes(mode) ? mode : 'dark'
+
+  const bg = getComputedStyle(root).getPropertyValue('--bg').trim()
+  if (bg) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg)
 }

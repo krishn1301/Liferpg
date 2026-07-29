@@ -57,6 +57,6 @@ const S = {
     borderTopColor: 'transparent'
   },
   itemActive: { color: 'var(--accent)', borderTopColor: 'var(--accent)' },
-  icon: { fontSize: 17, lineHeight: 1 },
-  label: { fontSize: 10, fontWeight: 600, letterSpacing: '0.02em' }
+  icon: { fontSize: 'var(--fs-lg)', lineHeight: 1 },
+  label: { fontSize: 'var(--fs-2xs)', fontWeight: 600, letterSpacing: '0.02em' }
 }
