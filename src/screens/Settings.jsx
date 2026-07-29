@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react'
 import { useStore } from '../state/StoreProvider'
+import { useToday } from '../state/useToday'
 import { applyTheme, THEMES } from '../theme/tokens'
 import { describeBackup, exportBackup, parseBackup, readFile } from '../platform/backup'
+import { convertDesktopSave, describeImport, isDesktopSave } from '../platform/importDesktop'
+import { exportExcel } from '../platform/excel'
 import { platform } from '../platform/storage'
 import { Screen, SectionTitle, Button, Sheet, Card } from '../components/ui'
 
@@ -9,11 +12,13 @@ const VERSION = __APP_VERSION__
 
 export default function Settings() {
   const { doc, dispatch } = useStore()
+  const today = useToday()
   const fileInput = useRef(null)
 
   const [status, setStatus] = useState(null) // { tone: 'ok' | 'bad', text }
-  const [pending, setPending] = useState(null) // parsed doc awaiting confirmation
+  const [pending, setPending] = useState(null) // { doc, kind, summary } awaiting confirmation
   const [confirmReset, setConfirmReset] = useState(false)
+  const [busy, setBusy] = useState(false)
 
   const theme = doc.settings.theme ?? 'dark'
 
@@ -35,6 +40,24 @@ export default function Settings() {
     }
   }
 
+  const onExportExcel = async () => {
+    setStatus(null)
+    setBusy(true)
+    try {
+      const { name, shared } = await exportExcel(doc, today)
+      setStatus({ tone: 'ok', text: shared ? `Shared ${name}.` : `Saved ${name}.` })
+    } catch (err) {
+      setStatus({ tone: 'bad', text: err.message || "Couldn't build the spreadsheet." })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /**
+   * One picker for both file kinds. A desktop save and a LifeRPG backup are
+   * both "a JSON file with my habits in it" as far as the user is concerned,
+   * so making them choose the right button first is a trap.
+   */
   const onPickFile = async (event) => {
     const file = event.target.files?.[0]
     // Reset the input so choosing the same file twice still fires a change.
@@ -43,9 +66,21 @@ export default function Settings() {
 
     setStatus(null)
     try {
-      setPending(parseBackup(await readFile(file)))
+      const text = await readFile(file)
+      const parsed = JSON.parse(text)
+
+      if (isDesktopSave(parsed)) {
+        const next = convertDesktopSave(parsed)
+        setPending({ doc: next, kind: 'desktop', summary: describeImport(parsed, next) })
+      } else {
+        const next = parseBackup(text)
+        setPending({ doc: next, kind: 'backup', summary: describeBackup(next) })
+      }
     } catch (err) {
-      setStatus({ tone: 'bad', text: err.message })
+      setStatus({
+        tone: 'bad',
+        text: err instanceof SyntaxError ? "That file isn't valid JSON." : err.message
+      })
     }
   }
 
@@ -92,6 +127,17 @@ export default function Settings() {
         />
       </Card>
 
+      <SectionTitle>Spreadsheet</SectionTitle>
+      <Card>
+        <p style={S.body}>
+          A colour-coded grid of every habit against every day, plus per-habit stats — the
+          same three sheets the desktop app produced.
+        </p>
+        <Button variant="ghost" onClick={onExportExcel} disabled={busy} style={{ width: '100%' }}>
+          {busy ? 'Building…' : 'Export Excel'}
+        </Button>
+      </Card>
+
       {status && (
         <p style={{ ...S.status, color: status.tone === 'ok' ? 'var(--accent)' : 'var(--danger)' }}>
           {status.text}
@@ -112,16 +158,19 @@ export default function Settings() {
       {pending && (
         <Sheet
           open
-          title="Restore backup"
+          title={pending.kind === 'desktop' ? 'Import from desktop' : 'Restore backup'}
           onClose={() => setPending(null)}
           footer={
             <>
               <Button
                 onClick={() => {
-                  dispatch({ type: 'doc/replace', doc: pending })
-                  applyTheme(pending.settings?.theme ?? 'dark')
+                  dispatch({ type: 'doc/replace', doc: pending.doc })
+                  applyTheme(pending.doc.settings?.theme ?? 'dark')
+                  setStatus({
+                    tone: 'ok',
+                    text: pending.kind === 'desktop' ? 'Desktop data imported.' : 'Backup restored.'
+                  })
                   setPending(null)
-                  setStatus({ tone: 'ok', text: 'Backup restored.' })
                 }}
                 style={{ flex: 1 }}
               >
@@ -133,11 +182,17 @@ export default function Settings() {
             </>
           }
         >
-          <p style={S.body}>This backup contains:</p>
-          <p style={S.summary}>{describeBackup(pending)}</p>
+          {pending.kind === 'desktop' ? (
+            <DesktopSummary summary={pending.summary} />
+          ) : (
+            <>
+              <p style={S.body}>This backup contains:</p>
+              <p style={S.summary}>{pending.summary}</p>
+            </>
+          )}
           <p style={S.body}>
-            Restoring <strong>replaces</strong> everything currently on this device. Your present
-            data is not merged and cannot be recovered afterwards.
+            This <strong>replaces</strong> everything currently on this device. Your present data
+            is not merged and cannot be recovered afterwards.
           </p>
         </Sheet>
       )}
@@ -174,6 +229,35 @@ export default function Settings() {
         </Sheet>
       )}
     </Screen>
+  )
+}
+
+/**
+ * The XP correction is explained here rather than left to be discovered. The
+ * desktop app's counter only ever went up, so its number is almost always
+ * higher than the completions justify, and an unexplained drop reads as the
+ * import having lost something.
+ */
+function DesktopSummary({ summary }) {
+  return (
+    <>
+      <p style={S.body}>Found in this file:</p>
+      <p style={S.summary}>
+        {summary.habits} habit{summary.habits === 1 ? '' : 's'} · {summary.completions} completions
+      </p>
+      {summary.xpDrifted ? (
+        <p style={S.body}>
+          The file records <strong>{summary.storedXp} XP</strong>, but {summary.completions}{' '}
+          completions earn <strong>{summary.derivedXp} XP</strong>. The desktop app added XP on
+          every tick and never took it back when you unticked, so its total drifted. LifeRPG works
+          the number out from your history instead, so it can&apos;t drift again.
+        </p>
+      ) : (
+        <p style={S.body}>
+          That works out to <strong>{summary.derivedXp} XP</strong>.
+        </p>
+      )}
+    </>
   )
 }
 

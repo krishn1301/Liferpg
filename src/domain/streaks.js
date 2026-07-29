@@ -127,6 +127,16 @@ export function completionRate(habit, fromKey, toKey) {
 }
 
 /**
+ * Habits that still count. Archived ones stay in the file so their history
+ * survives, but they leave every total.
+ *
+ * Lives here rather than in stats.js because xp.js needs it too, and stats.js
+ * already imports xp.js — putting it there and importing it back would be a
+ * cycle.
+ */
+export const activeHabits = (habits) => (habits ?? []).filter((h) => !h.archived)
+
+/**
  * Habits that should appear on a given day: scheduled, not skipped, and — for
  * weekly habits — not already finished for the week.
  */

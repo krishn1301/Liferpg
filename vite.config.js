@@ -36,7 +36,23 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,woff2,png,svg}'],
-        // exceljs is lazy-loaded and large; don't force it into the precache
+        // exceljs is a ~930 kB lazy chunk that most people never open. Being
+        // under the size cap below is not enough to keep it out — workbox
+        // precaches anything matching globPatterns, which would download the
+        // whole library on first visit and undo the lazy import in excel.js.
+        globIgnores: ['**/exceljs*.js'],
+        // Fetched on demand instead, then kept, so the second export works
+        // offline even though the first needs a connection.
+        runtimeCaching: [
+          {
+            urlPattern: /exceljs.*\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'liferpg-exceljs',
+              expiration: { maxEntries: 2 }
+            }
+          }
+        ],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024
       }
     })

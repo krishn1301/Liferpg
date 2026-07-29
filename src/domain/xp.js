@@ -1,4 +1,4 @@
-import { currentStreak } from './streaks'
+import { activeHabits, bestStreak, dueToday } from './streaks'
 
 export const XP_PER_COMPLETION = 10
 
@@ -38,23 +38,39 @@ export const BADGES = [
   { id: 'century', icon: '💯', label: 'Century', desc: '100 total completions' }
 ]
 
+/**
+ * Which badges are unlocked.
+ *
+ * Streak badges key off `bestStreak`, not the current one: a badge is a record
+ * of something you did, and Stats prints "Best ever" directly above this grid.
+ * Keying off the current streak made a lapsed 42-day run show "Best ever: 42"
+ * next to a locked 30-day badge, which reads as a bug.
+ *
+ * Everything here runs over `activeHabits`, matching `overview` in stats.js.
+ * Archiving a habit used to change the Stats tiles but not the badges.
+ */
 export function earnedBadges(habits, todayKey) {
-  const xp = totalXp(habits)
-  const streaks = habits.map((h) => currentStreak(h, todayKey).streak)
-  const best = streaks.length ? Math.max(...streaks) : 0
-  const completions = habits.reduce(
+  const active = activeHabits(habits)
+
+  const xp = totalXp(active)
+  const best = active.reduce((max, h) => Math.max(max, bestStreak(h)), 0)
+  const completions = active.reduce(
     (sum, h) => sum + Object.values(h.completions ?? {}).filter(Boolean).length,
     0
   )
-  const dueCount = habits.filter((h) => !h.archived).length
-  const doneToday = habits.filter((h) => h.completions?.[todayKey]).length
+
+  // Only what is actually scheduled today can make a day perfect. Counting
+  // every active habit meant a single Mon/Wed/Fri habit made Tuesday
+  // unwinnable — the habit nobody was asked to do still sat in the denominator.
+  const due = dueToday(active, todayKey)
+  const doneToday = due.filter((h) => h.completions?.[todayKey]).length
 
   const unlocked = {
     'week-warrior': best >= 7,
     diamond: best >= 30,
-    'perfect-day': dueCount > 0 && doneToday === dueCount,
+    'perfect-day': due.length > 0 && doneToday === due.length,
     centurion: xp >= 100,
-    master: dueCount >= 5,
+    master: active.length >= 5,
     century: completions >= 100
   }
 

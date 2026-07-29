@@ -10,11 +10,11 @@
 import { rangeKeys } from './dates'
 import { isDueOn } from './schedule'
 import { CATEGORIES, categoryOf } from './constants'
-import { currentStreak, bestStreak } from './streaks'
+import { activeHabits, currentStreak, bestStreak } from './streaks'
 import { totalXp } from './xp'
 
-/** Habits that still count — archived ones stay in the file but leave the maths. */
-export const activeHabits = (habits) => (habits ?? []).filter((h) => !h.archived)
+// Re-exported so callers that think of this as a stats concern keep working.
+export { activeHabits }
 
 /** A day counts against a habit only if it was scheduled and not deliberately skipped. */
 const counts = (habit, dateKey) => isDueOn(habit, dateKey) && !habit.skips?.[dateKey]
