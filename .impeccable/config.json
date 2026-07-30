@@ -2,27 +2,7 @@
   "detector": {
     "ignoreRules": [],
     "ignoreFiles": ["legacy/**", "android/**", "dist/**"],
-    "ignoreValues": [
-      {
-        "rule": "side-tab",
-        "value": "*",
-        "files": [
-          "src/screens/Today.jsx",
-          "src/screens/Habits.jsx",
-          "src/screens/Calendar.jsx",
-          "src/screens/MyDay.jsx"
-        ],
-        "createdAt": "2026-07-29T00:00:00.000Z",
-        "reason": "The 3px category stripe is the app's inherited identity, carried over from the LifeRPG desktop build, and it is the only place a habit's category is encoded as colour. In a zero-radius monochrome UI with no other chrome it is the load-bearing signal, not decoration. Reviewed and kept deliberately."
-      },
-      {
-        "rule": "overused-font",
-        "value": "*",
-        "files": ["src/theme/global.css"],
-        "createdAt": "2026-07-29T00:00:00.000Z",
-        "reason": "Inter is self-hosted via @fontsource-variable/inter specifically because the desktop build's Google Fonts @import was blocked by CSP and silently never loaded. Swapping the typeface is a redesign, out of scope for an audit-and-polish pass, and would re-open a solved offline-loading problem."
-      }
-    ]
+    "ignoreValues": []
   },
   "hook": {
     "enabled": true,

@@ -1,78 +1,100 @@
-/* Inter ships self-hosted via @fontsource-variable/inter, imported in main.jsx.
-   The desktop build's Google Fonts @import was blocked by CSP and never loaded. */
+/* Archivo (structure, language) and JetBrains Mono (measurement) ship
+   self-hosted via @fontsource-variable/*, imported in main.jsx. The desktop
+   build's Google Fonts @import was blocked by CSP and silently never loaded,
+   so nothing here may reach the network.
+
+   The world is Factory Records catalogue sleeves — see DESIGN.md. Two rules
+   drive most of what follows: there is no elevation (separation is a 1px
+   line, never a lighter fill), and completion is an inversion. */
 
 :root {
-  /* ---- Colour ------------------------------------------------------------
-     Dark is the default and the identity: near-black, one emerald accent,
-     everything else greyscale. Light below is the same palette inverted, not
-     a different design. */
-  --bg: #0e0e0e;
-  --surface: #141414;
-  --card: #1a1a1a;
-  --input: #222222;
-  --border: #2a2a2a;
-  --text: #e0e0e0; /* 14.6:1 on --bg */
-  /* Both greys were raised to clear WCAG AA (4.5:1) at the small sizes they
-     are actually used at. The originals — #888888 and #555555 — measured
-     5.45:1 and 2.59:1 against --bg, so every caption, tile label and chart
-     tick in the app was at or below the floor.
-     Sized against --card (#1a1a1a), not --bg: cards are the lightest thing
-     this text ever sits on, so passing there passes everywhere. */
-  --textDim: #989898; /* 6.0:1 on --card */
-  --textMuted: #828282; /* 4.5:1 on --card */
-  --accent: #22c55e;
-  --danger: #ef4444;
-  --warn: #f97316;
-  /* Text drawn on top of --accent. A token because the accent darkens in
-     light mode, and near-black on a dark green is unreadable. */
-  --onAccent: #04140a;
+  /* ---- Colour: VOID ground -----------------------------------------------
+     Panels are the same black as the page. `--panel` exists only for surfaces
+     that must sit above the scrim — sheets, the tab bar — and is barely
+     lifted, because a visibly raised card is the wrong world. */
+  --bg: #0a0a0b; /* VOID */
+  --surface: #0a0a0b;
+  --card: #0a0a0b;
+  --panel: #121214;
+  --input: #121214;
+  --border: #2b2c2e; /* structural hairline: cell edges, panel outlines */
+  --rule: #1b1c1e; /* decorative hairline: separators within one group */
+
+  /* PULSE. Warm off-white, not #fff — the world's ink is pressed, not lit. */
+  --text: #f2f1ec; /* 16.5:1 on --panel */
+  --textDim: #adb1b4; /* 8.7:1 on --panel */
+  --textMuted: #7c8083; /* 4.7:1 on --panel — at the AA floor, do not darken */
+
+  /* ENERGY. The signal colour, and the only chromatic accent in the chrome:
+     it marks what is live, next, or just earned. Everything else is ink. */
+  --accent: #e9b417; /* 9.8:1 on --panel */
+  --danger: #f0574c; /* 5.5:1 */
+  --warn: #e9b417;
+  --onAccent: #0a0a0b; /* 10.4:1 on --accent */
+  /* Text on an inverted row — the completion state fills with --text. */
+  --onInk: #0a0a0b; /* 17.5:1 on --text */
+
+  --scrim: rgba(0, 0, 0, 0.72);
 
   /* ---- Type scale --------------------------------------------------------
-     rem, never px. Every size here is relative to the root font size, so a
-     text-size preference (Phase 4 Settings, and the WebView's own text zoom)
-     scales the whole interface instead of doing nothing. Comments give the
-     px equivalent at the 16px default. */
-  --fs-3xs: 0.5625rem; /*  9px — badge sub-labels, chart ticks */
-  --fs-2xs: 0.625rem; /* 10px — micro caps, tab labels */
+     rem, never px. Every size is relative to the root, so the WebView's text
+     zoom and the Settings text-size preference scale the whole interface
+     instead of doing nothing. Comments give the px equivalent at 16px root. */
+  --fs-3xs: 0.5625rem; /*  9px — code-strip legends, plot ticks */
+  --fs-2xs: 0.625rem; /* 10px — mono labels, tab labels, quest numbers */
   --fs-xs: 0.6875rem; /* 11px — meta rows, sheet titles */
   --fs-sm: 0.75rem; /* 12px — buttons, secondary text */
-  --fs-md: 0.8125rem; /* 13px — subtitles, bar labels */
+  --fs-md: 0.8125rem; /* 13px — subtitles, field labels */
   --fs-base: 0.9375rem; /* 15px — body, inputs, habit names */
-  --fs-lg: 1.0625rem; /* 17px — checkmarks, tab icons */
+  --fs-lg: 1.0625rem; /* 17px — tab icons */
   --fs-xl: 1.25rem; /* 20px — row icons, tile values */
-  --fs-2xl: 1.625rem; /* 26px — screen titles */
-  --fs-3xl: 1.875rem; /* 30px — the one hero number on Today */
-  --fs-4xl: 2.5rem; /* 40px — empty-state and splash glyphs */
+  --fs-2xl: 1.75rem; /* 28px — screen titles, engraved */
+  --fs-3xl: 2.375rem; /* 38px — the one hero numeral per screen */
+  --fs-4xl: 4rem; /* 64px — the level-up card's numeral */
+
+  /* ---- Faces -------------------------------------------------------------
+     Two, and they never trade jobs. Archivo is structure and language;
+     JetBrains Mono is measurement — codes, times, counts. Mono never sets
+     prose, which is the difference between data and costume. */
+  --font-sans: 'Archivo Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
 
   /* ---- Metrics ---------------------------------------------------------- */
   /* Android accessibility guidance is 48dp. Nothing tappable goes under it. */
   --touch: 48px;
   --tab-height: 58px;
 
-  /* Android gesture bar / notch */
+  /* Notch, gesture bar, and iOS home indicator. */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
   color-scheme: dark;
 }
 
+/* PULSE ground. The same grammar on paper, not a second design: identical
+   structure, identical rules, ink and ground exchanged. */
 :root[data-theme='light'] {
-  --bg: #f5f5f4;
-  --surface: #ffffff;
-  --card: #ffffff;
-  --input: #f0f0ef;
-  --border: #d9d9d6;
-  --text: #1a1a1a; /* 16.0:1 on --bg */
-  --textDim: #595959; /* 6.4:1 */
-  --textMuted: #707070; /* 4.5:1 */
-  /* Darkened from the dark theme's #22c55e, which measures only 3.0:1 on this
-     background and fails as body text. #15803d clears AA both as text (4.6:1)
-     and behind the white label of a primary button (5.0:1). */
-  --accent: #15803d;
-  --danger: #b91c1c;
-  --warn: #b45309;
-  /* Inverted here: near-black on the darker green would drop to 3.8:1. */
-  --onAccent: #ffffff;
+  --bg: #eeece4;
+  --surface: #eeece4;
+  --card: #eeece4;
+  --panel: #f7f6f1;
+  --input: #f7f6f1;
+  --border: #c9c6ba;
+  --rule: #dedbd0;
+
+  --text: #0a0a0b; /* 18.3:1 on --panel */
+  --textDim: #4a4d4f; /* 7.9:1 */
+  --textMuted: #63676a; /* 5.3:1 */
+
+  /* ENERGY translated. #e9b417 measures 1.6:1 on paper and is unreadable as
+     text or as a mark; the role survives, the value cannot. */
+  --accent: #7d5500; /* 6.1:1 */
+  --danger: #b0201c; /* 6.3:1 */
+  --warn: #7d5500;
+  --onAccent: #f2f1ec; /* 5.9:1 on --accent */
+  --onInk: #f2f1ec; /* 17.5:1 on --text */
+
+  --scrim: rgba(10, 10, 11, 0.55);
 
   color-scheme: light;
 }
@@ -94,8 +116,9 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter Variable', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   font-size: var(--fs-base);
+  font-weight: 450;
   -webkit-font-smoothing: antialiased;
   /* Stop the WebView bouncing/overscrolling like a browser */
   overscroll-behavior: none;
@@ -126,9 +149,11 @@ button,
 }
 
 /* Press feedback. `-webkit-tap-highlight-color: transparent` above removes
-   Android's default flash, so without this a tap has no acknowledgement at
-   all until the state change lands — which on a slow render reads as a dead
-   button. Opacity only: it is compositor-only and cannot cause layout. */
+   Android's default flash, so without this a tap has no acknowledgement at all
+   until the state change lands — which on a slow render reads as a dead
+   button. On iPhone there are no haptics either, so this is the *entire*
+   confirmation that a tap registered. Opacity only: compositor-only, and it
+   cannot cause layout. */
 button,
 [role='button'],
 a {
@@ -146,8 +171,8 @@ button:disabled {
   cursor: default;
 }
 
-/* Keyboard focus stays visible; pointer focus does not draw a ring on a
-   phone, where every tap would otherwise leave one behind. */
+/* Keyboard focus stays visible; pointer focus does not draw a ring on a phone,
+   where every tap would otherwise leave one behind. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -158,6 +183,46 @@ button:disabled {
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border);
+}
+
+/* ---- The completion sweep ------------------------------------------------
+   The one authored moment on the busiest screen. A finished habit inverts to
+   PULSE ground with VOID text; the row switches state immediately and a
+   ground-coloured panel is swept off it left-to-right, so what you see is the
+   press travelling across the record.
+
+   Done this way round there is no duplicated DOM and no blend mode: the row
+   underneath is already in its final state and fully readable, so the sweep is
+   pure decoration over correct content and a dropped frame costs nothing.
+   clip-path is compositor-friendly; animating background-color would repaint. */
+@keyframes sweep-off {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 100%);
+  }
+}
+
+.sweep-off {
+  animation: sweep-off 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* The level-up card's numeral, and a new pulsar ridge, draw on. Both are
+   one-shot and fire only on a real event — never on mount. */
+@keyframes catalog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.catalog-in {
+  animation: catalog-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

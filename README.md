@@ -10,9 +10,28 @@ Distributed as a sideloaded APK (not on the Play Store) plus an installable web 
 
 ## Status
 
-**Phase 0 — pipeline.** The app is currently a smoke screen that proves the signed APK
-builds, installs, and can read and write device storage. Features land in Phase 1+.
-See the plan for the full build order.
+Feature-complete for its three users. All eight screens work, the data is real, and the
+visual language is the one described in [DESIGN.md](DESIGN.md) — a record catalogue, not
+the desktop app's inherited grey. See [PRODUCT.md](PRODUCT.md) for what the product is
+actually for.
+
+## Install
+
+**Android** — download the APK from the latest [Release] and open it. You will have to
+allow install from unknown sources once; it is not on the Play Store.
+
+**iPhone** — open the Pages URL in Safari, then **Share → Add to Home Screen**. iOS has no
+install prompt, so nothing will offer this to you. Running it from the home screen rather
+than a browser tab matters: iOS is much more willing to clear a tab's storage to reclaim
+space, and that storage is your entire history.
+
+The two installs are separate apps with separate data. There is no sync, and none is
+planned. Export a backup from Settings if you want to move between them.
+
+**Reminders only work on Android.** iOS Safari cannot schedule a local notification, and
+Web Push would need a server this app deliberately does not have. Settings says so.
+
+[Release]: ../../releases/latest
 
 ## Stack
 
@@ -22,7 +41,8 @@ See the plan for the full build order.
 | Android shell | Capacitor 8 (`android/` is committed) |
 | Web app | `vite-plugin-pwa` — installable, offline |
 | Storage | `@capacitor/preferences` (native storage on Android, `localStorage` on web) |
-| Charts | recharts |
+| Type | Archivo + JetBrains Mono, self-hosted via `@fontsource-variable` |
+| Charts | none — the trend plot and code strips are hand-drawn SVG and divs |
 | Tests | Vitest |
 | CI | GitHub Actions — signed APK on tag, Pages deploy on `main` |
 
@@ -35,6 +55,7 @@ npm install
 npm run dev      # http://localhost:5173 — use device toolbar at phone dimensions
 npm test
 npm run lint
+npm run icons    # regenerate the app icons from the design system
 ```
 
 Local notifications and haptics are **native-only** and cannot be exercised in a browser.
@@ -85,8 +106,9 @@ src/
   domain/       pure logic — dates, schedules, streaks, XP. No React, no plugins.
   state/        one document, one reducer, debounced autosave
   screens/      one file per screen
-  components/   shared UI
+  components/   shared UI — ui.jsx is the primitives, catalog.jsx the world's own devices
   theme/        design tokens, light + dark
+scripts/        build tooling (icon generation)
 android/        Capacitor's native project (committed)
 legacy/         the original Electron desktop app, kept for reference during the port
 ```

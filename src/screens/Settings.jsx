@@ -6,7 +6,8 @@ import { describeBackup, exportBackup, parseBackup, readFile } from '../platform
 import { convertDesktopSave, describeImport, isDesktopSave } from '../platform/importDesktop'
 import { exportExcel } from '../platform/excel'
 import { platform } from '../platform/storage'
-import { Screen, SectionTitle, Button, Sheet, Card } from '../components/ui'
+import { canRemind, isIOS, isStandalone } from '../platform/device'
+import { Screen, Overline, Button, Sheet, Panel } from '../components/ui'
 
 const VERSION = __APP_VERSION__
 
@@ -86,26 +87,51 @@ export default function Settings() {
 
   return (
     <Screen title="Settings" subtitle={`LifeRPG ${VERSION} · ${platform}`}>
-      <SectionTitle>Appearance</SectionTitle>
+      <Overline>Appearance</Overline>
       <div style={S.segmented}>
         {THEMES.map((mode) => (
           <button
             key={mode}
             onClick={() => setTheme(mode)}
             aria-pressed={theme === mode}
-            style={{
-              ...S.segment,
-              background: theme === mode ? 'var(--accent)' : 'transparent',
-              color: theme === mode ? 'var(--onAccent)' : 'var(--textDim)'
-            }}
+            style={{ ...S.segment, ...(theme === mode ? S.selected : null) }}
           >
             {mode}
           </button>
         ))}
       </div>
 
-      <SectionTitle>Your data</SectionTitle>
-      <Card>
+      <Overline>Reminders</Overline>
+      <Panel>
+        {canRemind ? (
+          <p style={{ ...S.body, marginBottom: 0 }}>
+            This build can post reminders. Turn them on per habit when you add or edit one.
+          </p>
+        ) : (
+          // Said plainly rather than shown as a switch that quietly does
+          // nothing. iOS Safari has no way to schedule a local notification,
+          // and Web Push would need a server this app deliberately doesn't have.
+          <p style={{ ...S.body, marginBottom: 0 }}>
+            Reminders only work in the Android app. {isIOS ? 'On iPhone, ' : 'In a browser, '}
+            there is no way to schedule a notification without a server, and LifeRPG keeps
+            everything on your device. Nothing here is switched off — the capability isn&apos;t
+            there to switch on.
+          </p>
+        )}
+      </Panel>
+
+      {isIOS && !isStandalone && (
+        <Panel style={{ marginTop: 8 }}>
+          <p style={{ ...S.body, marginBottom: 0 }}>
+            <strong>Add LifeRPG to your Home Screen.</strong> Tap Share, then{' '}
+            <em>Add to Home Screen</em>. Running from a browser tab, iOS is far more willing to
+            clear your history to reclaim space.
+          </p>
+        </Panel>
+      )}
+
+      <Overline>Your data</Overline>
+      <Panel>
         <p style={S.body}>
           Everything lives on this phone and nowhere else. Uninstalling the app, or losing the
           device, loses it all — so export a backup somewhere safe now and then.
@@ -125,10 +151,10 @@ export default function Settings() {
           onChange={onPickFile}
           style={{ display: 'none' }}
         />
-      </Card>
+      </Panel>
 
-      <SectionTitle>Spreadsheet</SectionTitle>
-      <Card>
+      <Overline>Spreadsheet</Overline>
+      <Panel>
         <p style={S.body}>
           A colour-coded grid of every habit against every day, plus per-habit stats — the
           same three sheets the desktop app produced.
@@ -136,7 +162,7 @@ export default function Settings() {
         <Button variant="ghost" onClick={onExportExcel} disabled={busy} style={{ width: '100%' }}>
           {busy ? 'Building…' : 'Export Excel'}
         </Button>
-      </Card>
+      </Panel>
 
       {status && (
         <p style={{ ...S.status, color: status.tone === 'ok' ? 'var(--accent)' : 'var(--danger)' }}>
@@ -144,8 +170,8 @@ export default function Settings() {
         </p>
       )}
 
-      <SectionTitle>Danger zone</SectionTitle>
-      <Card>
+      <Overline>Danger zone</Overline>
+      <Panel>
         <p style={S.body}>
           Deletes every habit, medicine, routine block and day of history on this device. There is
           no undo.
@@ -153,7 +179,7 @@ export default function Settings() {
         <Button variant="danger" onClick={() => setConfirmReset(true)} style={{ width: '100%' }}>
           Erase everything
         </Button>
-      </Card>
+      </Panel>
 
       {pending && (
         <Sheet
@@ -265,14 +291,19 @@ const S = {
   segmented: { display: 'flex', border: '1px solid var(--border)' },
   segment: {
     flex: 1,
+    minWidth: 0,
     padding: '12px 4px',
+    background: 'transparent',
+    color: 'var(--textDim)',
     fontSize: 'var(--fs-xs)',
     fontWeight: 700,
     textTransform: 'uppercase',
-    letterSpacing: '0.06em'
+    letterSpacing: '0.1em'
   },
+  selected: { background: 'var(--text)', color: 'var(--onInk)' },
   body: { fontSize: 'var(--fs-md)', color: 'var(--textDim)', lineHeight: 1.6, marginBottom: 14 },
   summary: {
+    fontFamily: 'var(--font-mono)',
     fontSize: 'var(--fs-base)',
     fontWeight: 600,
     color: 'var(--text)',

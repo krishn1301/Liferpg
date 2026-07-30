@@ -6,7 +6,7 @@ import { MED_TIMES } from '../domain/constants'
 import { DAY_LABELS, describeSchedule } from '../domain/schedule'
 import { adherence, describeDoses, doseId, dosesForDay, isCourseActive } from '../domain/medicines'
 import { tap } from '../platform/haptics'
-import { Screen, SectionTitle, Button, Sheet, Field, EmptyState, inputStyle } from '../components/ui'
+import { Screen, Overline, Panel, Rule, Button, Sheet, Field, EmptyState, Data, inputStyle } from '../components/ui'
 
 const BLANK = {
   name: '',
@@ -49,24 +49,24 @@ export default function Medicines() {
     >
       {doc.medicines.length === 0 ? (
         <EmptyState
-          icon="💊"
           title="No medicines yet"
           hint="Track a prescription or a daily supplement, with the times you take it."
           action={<Button onClick={() => setEditing({ ...BLANK })}>Add a medicine</Button>}
         />
       ) : (
         <>
-          <SectionTitle>Today</SectionTitle>
+          <Overline>Today</Overline>
           {doses.length === 0 ? (
             <p style={S.note}>Nothing scheduled today.</p>
           ) : (
-            <div style={S.list}>
-              {MED_TIMES.filter((slot) => doses.some((d) => d.time === slot.key)).map((slot) => (
+            // A timetable: each slot is a departure time with its doses under it.
+            <Panel flush>
+              {MED_TIMES.filter((slot) => doses.some((d) => d.time === slot.key)).map((slot, i) => (
                 <div key={slot.key}>
+                  {i > 0 && <Rule />}
                   <div style={S.slotHead}>
-                    <span>{slot.icon}</span>
-                    <span>{slot.label}</span>
-                    <span style={S.slotTime}>{formatTime(slot.key)}</span>
+                    <Data style={S.slotTime}>{formatTime(slot.key)}</Data>
+                    <Data style={S.slotLabel}>{slot.label}</Data>
                   </div>
                   {doses
                     .filter((d) => d.time === slot.key)
@@ -86,28 +86,33 @@ export default function Medicines() {
                     ))}
                 </div>
               ))}
-            </div>
+            </Panel>
           )}
 
-          <SectionTitle>Last 7 days</SectionTitle>
-          <div style={S.adherence}>
-            <span style={S.adherencePct}>{week.pct}%</span>
-            <span style={S.adherenceNote}>
-              {week.taken} of {week.due} doses taken
-            </span>
-          </div>
+          <Overline>Last 7 days</Overline>
+          <Panel flush>
+            <div style={S.adherence}>
+              <Data style={S.adherenceLabel}>Adherence</Data>
+              <Data style={S.adherencePct}>{week.pct}%</Data>
+            </div>
+            <Rule />
+            <div style={S.adherence}>
+              <Data style={S.adherenceLabel}>Doses taken</Data>
+              <Data style={S.adherenceNote}>
+                {week.taken} of {week.due}
+              </Data>
+            </div>
+          </Panel>
 
-          <SectionTitle>All medicines</SectionTitle>
-          <div style={S.list}>
-            {doc.medicines.map((med) => (
-              <MedRow
-                key={med.id}
-                med={med}
-                today={today}
-                onClick={() => setEditing({ ...med })}
-              />
+          <Overline>All medicines</Overline>
+          <Panel flush>
+            {doc.medicines.map((med, i) => (
+              <div key={med.id}>
+                {i > 0 && <Rule />}
+                <MedRow med={med} today={today} onClick={() => setEditing({ ...med })} />
+              </div>
             ))}
-          </div>
+          </Panel>
         </>
       )}
 
@@ -133,20 +138,22 @@ export default function Medicines() {
 
 function DoseRow({ dose, onToggle }) {
   return (
-    <button onClick={onToggle} aria-pressed={dose.taken} style={S.doseRow}>
+    <button
+      onClick={onToggle}
+      aria-pressed={dose.taken}
+      aria-label={dose.taken ? `Mark ${dose.med.name} not taken` : `Mark ${dose.med.name} taken`}
+      style={{ ...S.doseRow, ...(dose.taken ? S.taken : null) }}
+    >
       <span style={{ fontSize: 'var(--fs-xl)' }}>{dose.med.icon}</span>
       <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-        <div style={{ ...S.doseName, textDecoration: dose.taken ? 'line-through' : 'none' }}>
-          {dose.med.name}
-        </div>
+        <div style={S.doseName}>{dose.med.name}</div>
         {dose.med.dose && <div style={S.doseMeta}>{dose.med.dose}</div>}
       </div>
       <span
         style={{
           ...S.check,
-          background: dose.taken ? 'var(--accent)' : 'transparent',
-          borderColor: dose.taken ? 'var(--accent)' : 'var(--border)',
-          color: dose.taken ? 'var(--onAccent)' : 'transparent'
+          borderColor: dose.taken ? 'currentColor' : 'var(--border)',
+          color: dose.taken ? 'currentColor' : 'transparent'
         }}
       >
         ✓
@@ -165,13 +172,12 @@ function MedRow({ med, today, onClick }) {
       <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
         <div style={S.doseName}>{med.name}</div>
         <div style={S.doseMeta}>
-          {med.dose && <span>{med.dose} · </span>}
-          <span>{describeDoses(med)}</span>
-          <span> · {describeSchedule(med.schedule)}</span>
+          {med.dose && `${med.dose} · `}
+          {describeDoses(med)} · {describeSchedule(med.schedule)}
         </div>
       </div>
-      {ended && <span style={S.tag}>Finished</span>}
-      {notStarted && <span style={S.tag}>Not started</span>}
+      {ended && <Data style={S.tag}>Finished</Data>}
+      {notStarted && <Data style={S.tag}>Not started</Data>}
     </button>
   )
 }
@@ -236,15 +242,10 @@ function MedSheet({ draft, onClose, onSave, onDelete }) {
                 key={slot.key}
                 onClick={() => toggleTime(slot.key)}
                 aria-pressed={on}
-                style={{
-                  ...S.timeBtn,
-                  background: on ? 'var(--accent)' : 'transparent',
-                  color: on ? 'var(--onAccent)' : 'var(--textDim)',
-                  borderColor: on ? 'var(--accent)' : 'var(--border)'
-                }}
+                style={{ ...S.timeBtn, ...(on ? S.selected : null) }}
               >
-                <span style={{ fontSize: 'var(--fs-base)' }}>{slot.icon}</span>
                 <span>{slot.label}</span>
+                <Data style={S.timeBtnClock}>{formatTime(slot.key)}</Data>
               </button>
             )
           })}
@@ -260,6 +261,7 @@ function MedSheet({ draft, onClose, onSave, onDelete }) {
           ].map((opt) => (
             <button
               key={opt.key}
+              aria-pressed={schedule.type === opt.key}
               onClick={() =>
                 set({
                   schedule:
@@ -268,11 +270,7 @@ function MedSheet({ draft, onClose, onSave, onDelete }) {
                       : { type: 'weekdays', days: schedule.days ?? [1, 3, 5] }
                 })
               }
-              style={{
-                ...S.segment,
-                background: schedule.type === opt.key ? 'var(--accent)' : 'transparent',
-                color: schedule.type === opt.key ? 'var(--onAccent)' : 'var(--textDim)'
-              }}
+              style={{ ...S.segment, ...(schedule.type === opt.key ? S.selected : null) }}
             >
               {opt.label}
             </button>
@@ -286,18 +284,14 @@ function MedSheet({ draft, onClose, onSave, onDelete }) {
               return (
                 <button
                   key={day}
+                  aria-pressed={on}
                   onClick={() => {
                     const days = new Set(schedule.days ?? [])
                     if (on) days.delete(day)
                     else days.add(day)
                     set({ schedule: { type: 'weekdays', days: [...days].sort() } })
                   }}
-                  style={{
-                    ...S.dayBtn,
-                    background: on ? 'var(--accent)' : 'transparent',
-                    color: on ? 'var(--onAccent)' : 'var(--textDim)',
-                    borderColor: on ? 'var(--accent)' : 'var(--border)'
-                  }}
+                  style={{ ...S.dayBtn, ...(on ? S.selected : null) }}
                 >
                   {DAY_LABELS[day][0]}
                 </button>
@@ -332,45 +326,53 @@ function MedSheet({ draft, onClose, onSave, onDelete }) {
 
 const S = {
   note: { fontSize: 'var(--fs-md)', color: 'var(--textDim)' },
-  list: { display: 'flex', flexDirection: 'column', gap: 8 },
   slotHead: {
     display: 'flex',
-    alignItems: 'center',
-    gap: 7,
-    fontSize: 'var(--fs-2xs)',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: 'var(--textDim)',
-    margin: '10px 0 6px'
+    alignItems: 'baseline',
+    gap: 10,
+    padding: '11px 16px 9px'
   },
-  slotTime: { marginLeft: 'auto', color: 'var(--textMuted)', letterSpacing: 0 },
+  slotTime: { fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--text)' },
+  slotLabel: {
+    fontSize: 'var(--fs-2xs)',
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    color: 'var(--textMuted)'
+  },
   doseRow: {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    background: 'var(--card)',
-    border: '1px solid var(--border)',
-    padding: '10px 12px',
-    width: '100%',
-    marginBottom: 6
+    background: 'transparent',
+    border: 'none',
+    borderTop: '1px solid var(--rule)',
+    padding: '10px 14px',
+    width: '100%'
   },
+  taken: { background: 'var(--text)', color: 'var(--onInk)' },
   medRow: {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    background: 'var(--card)',
-    border: '1px solid var(--border)',
-    padding: '12px 14px',
+    background: 'transparent',
+    padding: '12px 16px',
     width: '100%'
   },
-  doseName: { fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--text)' },
-  doseMeta: { fontSize: 'var(--fs-xs)', color: 'var(--textDim)', marginTop: 3 },
+  doseName: { fontSize: 'var(--fs-base)', fontWeight: 600 },
+  doseMeta: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    color: 'currentColor',
+    opacity: 0.62,
+    marginTop: 4
+  },
   tag: {
     fontSize: 'var(--fs-3xs)',
-    fontWeight: 700,
+    fontWeight: 600,
     textTransform: 'uppercase',
-    letterSpacing: '0.06em',
+    letterSpacing: '0.12em',
     color: 'var(--textMuted)',
     border: '1px solid var(--border)',
     padding: '3px 6px',
@@ -380,7 +382,8 @@ const S = {
     width: 32,
     height: 32,
     flexShrink: 0,
-    border: '2px solid',
+    background: 'transparent',
+    border: '1px solid',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -388,42 +391,59 @@ const S = {
     fontWeight: 800
   },
   adherence: {
-    background: 'var(--card)',
-    border: '1px solid var(--border)',
-    padding: 14,
     display: 'flex',
     alignItems: 'baseline',
-    gap: 10
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: '11px 16px'
   },
-  adherencePct: { fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--accent)' },
-  adherenceNote: { fontSize: 'var(--fs-sm)', color: 'var(--textDim)' },
+  adherenceLabel: {
+    fontSize: 'var(--fs-2xs)',
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    color: 'var(--textMuted)'
+  },
+  adherencePct: { fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--accent)' },
+  adherenceNote: { fontSize: 'var(--fs-base)', fontWeight: 700 },
+  selected: { background: 'var(--text)', color: 'var(--onInk)', borderColor: 'var(--text)' },
   timeGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 },
   timeBtn: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
+    gap: 4,
+    minWidth: 0,
     padding: '10px 4px',
-    border: '1px solid',
+    border: '1px solid var(--border)',
+    background: 'transparent',
+    color: 'var(--textDim)',
     fontSize: 'var(--fs-xs)',
     fontWeight: 700
   },
+  timeBtnClock: { fontSize: 'var(--fs-3xs)', opacity: 0.75 },
   segmented: { display: 'flex', border: '1px solid var(--border)' },
   segment: {
     flex: 1,
+    minWidth: 0,
     padding: '11px 4px',
+    border: 'none',
+    background: 'transparent',
+    color: 'var(--textDim)',
     fontSize: 'var(--fs-xs)',
     fontWeight: 700,
     textTransform: 'uppercase',
-    letterSpacing: '0.04em'
+    letterSpacing: '0.06em'
   },
   dayRow: { display: 'flex', gap: 6, marginTop: 10 },
   dayBtn: {
     flex: 1,
     minWidth: 0,
     height: 'var(--touch)',
-    border: '1px solid',
+    border: '1px solid var(--border)',
+    background: 'transparent',
+    color: 'var(--textDim)',
+    fontFamily: 'var(--font-mono)',
     fontSize: 'var(--fs-md)',
     fontWeight: 700
   },

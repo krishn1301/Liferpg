@@ -7,7 +7,7 @@ export default [
   { ignores: ['dist/**', 'android/**', 'legacy/**', 'dev-dist/**', 'node_modules/**'] },
   js.configs.recommended,
   {
-    files: ['**/*.{js,jsx}'],
+    files: ['**/*.{js,jsx,mjs}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -25,7 +25,8 @@ export default [
     }
   },
   {
-    files: ['vite.config.js', '**/*.test.js'],
+    // Build tooling runs in Node, not the browser.
+    files: ['vite.config.js', 'scripts/**', '**/*.test.js'],
     languageOptions: { globals: { ...globals.node } }
   }
 ]

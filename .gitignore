@@ -30,3 +30,6 @@ android/app/src/main/res/xml/config.xml
 
 # Vite / PWA generated
 dev-dist
+
+# impeccable session scratch — served decision pages, not project state
+.impeccable/questions/

@@ -2,7 +2,11 @@ import { useEffect } from 'react'
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { App as CapApp } from '@capacitor/app'
 import { StoreProvider, useStore } from './state/StoreProvider'
+import { requestPersistentStorage } from './platform/device'
 import BottomTabs, { TABS } from './components/BottomTabs'
+import { CatalogCard } from './components/catalog'
+import { useToday } from './state/useToday'
+import { totalXp, levelFromXp, earnedBadges } from './domain/xp'
 import Today from './screens/Today'
 import Habits from './screens/Habits'
 import Stats from './screens/Stats'
@@ -14,6 +18,15 @@ import Settings from './screens/Settings'
 import Placeholder from './screens/Placeholder'
 
 export default function App() {
+  // Ask once per launch for durable storage. Everything lives in localStorage,
+  // and on iOS that is evictable for a site the user hasn't engaged with — for
+  // a habit tracker, eviction means losing months of history. Best-effort and
+  // deliberately unreported: a refusal is not something to interrupt anyone
+  // with, and export is the real answer either way.
+  useEffect(() => {
+    requestPersistentStorage()
+  }, [])
+
   return (
     <StoreProvider>
       <HashRouter>
@@ -32,7 +45,7 @@ function Shell() {
   if (!ready) {
     return (
       <div style={S.splash}>
-        <div style={{ fontSize: 'var(--fs-4xl)' }}>⚔️</div>
+        <div style={S.wordmark}>LifeRPG</div>
       </div>
     )
   }
@@ -51,12 +64,32 @@ function Shell() {
           <Route path="/settings" element={<Settings />} />
           <Route
             path="*"
-            element={<Placeholder title="Not found" icon="🧭" note="That screen doesn't exist." />}
+            element={<Placeholder title="Not found" note="That screen doesn't exist." />}
           />
         </Routes>
       </main>
       <BottomTabs />
+      <Rewards />
     </>
+  )
+}
+
+/**
+ * The reward moments live at the shell, not on Today, because a habit can also
+ * be completed from the Calendar's day sheet. Anchoring them to one screen
+ * meant backfilling yesterday could silently push you up a level.
+ */
+function Rewards() {
+  const { doc } = useStore()
+  const today = useToday()
+  const badges = earnedBadges(doc.habits, today)
+
+  return (
+    <CatalogCard
+      level={levelFromXp(totalXp(doc.habits)).level}
+      badgeCount={badges.filter((b) => b.earned).length}
+      badges={badges}
+    />
   )
 }
 
@@ -95,5 +128,17 @@ const S = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center'
+  },
+  // The wordmark, engraved. There is no logo and none was ever commissioned;
+  // in this world the name set in the display face *is* the mark.
+  wordmark: {
+    fontSize: 'var(--fs-2xl)',
+    fontWeight: 800,
+    fontStretch: '78%',
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
+    // Tracking adds a trailing gap after the last letter; this pulls the
+    // optical centre back to the real one.
+    textIndent: '0.22em'
   }
 }
