@@ -7,7 +7,7 @@ import { dueToday } from '../domain/streaks'
 import { categoryOf } from '../domain/constants'
 import { describeSchedule } from '../domain/schedule'
 import { tap } from '../platform/haptics'
-import { Screen, Button, Sheet, EmptyState } from '../components/ui'
+import { Screen, Button, Sheet, EmptyState, Data } from '../components/ui'
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -53,11 +53,7 @@ export default function Calendar() {
       }
     >
       {doc.habits.length === 0 ? (
-        <EmptyState
-          icon="🗓️"
-          title="Nothing to show"
-          hint="Add a habit and your history fills in here."
-        />
+        <EmptyState title="Nothing to show" hint="Add a habit and your history fills in here." />
       ) : (
         <>
           <div style={S.weekRow}>
@@ -104,9 +100,18 @@ export default function Calendar() {
   )
 }
 
+/**
+ * One block in the month's code sheet. Three states, and no opacity ramp
+ * behind the numeral: a continuous fade puts the date on a mid-grey somewhere
+ * around 50%, where neither ink colour clears AA. So the fill is discrete —
+ * empty, part-pressed, pressed — and the *degree* is carried by a bar along
+ * the bottom edge, which nothing has to be read on top of.
+ */
 function DayCell({ dateKey, day, isToday, isFuture, onClick }) {
   const due = day?.due ?? 0
-  const pct = day?.pct ?? 0
+  const pct = isFuture ? 0 : (day?.pct ?? 0)
+  const full = pct >= 100
+  const part = pct > 0 && !full
 
   return (
     <button
@@ -114,36 +119,46 @@ function DayCell({ dateKey, day, isToday, isFuture, onClick }) {
       aria-label={`${dateKey}, ${day?.done ?? 0} of ${due} done`}
       style={{
         ...S.cell,
-        // Green means progress. A day that was due and got nothing done is not
-        // 25% of a good day, so it stays on the card colour — otherwise a fresh
-        // month reads as uniformly green when nothing has been done at all.
-        // A future day is not a failed day either: flat and dim, not a hole.
-        background: !isFuture && pct > 0 ? 'var(--accent)' : 'var(--card)',
-        opacity: isFuture ? 0.4 : pct > 0 ? 0.3 + (pct / 100) * 0.7 : 1,
+        background: full ? 'var(--text)' : 'transparent',
         borderColor: isToday ? 'var(--accent)' : 'var(--border)',
-        color: !isFuture && pct > 55 ? 'var(--onAccent)' : due ? 'var(--text)' : 'var(--textMuted)'
+        opacity: isFuture ? 0.45 : 1
       }}
     >
-      <span style={S.cellNum}>{Number(dateKey.slice(8))}</span>
+      {part && <span style={S.cellPart} aria-hidden="true" />}
+      <span
+        style={{
+          ...S.cellNum,
+          color: full ? 'var(--onInk)' : due ? 'var(--text)' : 'var(--textMuted)'
+        }}
+      >
+        {Number(dateKey.slice(8))}
+      </span>
+      {part && (
+        <span
+          style={{ ...S.cellBar, transform: `scaleX(${pct / 100})` }}
+          aria-hidden="true"
+        />
+      )}
     </button>
   )
 }
 
 function Legend() {
+  const items = [
+    { label: 'None', fill: 'transparent', bar: false },
+    { label: 'Part', fill: 'transparent', bar: true },
+    { label: 'All', fill: 'var(--text)', bar: false }
+  ]
   return (
     <div style={S.legend}>
-      <span style={S.legendLabel}>Less</span>
-      {[0, 0.35, 0.6, 0.8, 1].map((o) => (
-        <span
-          key={o}
-          style={{
-            ...S.legendSwatch,
-            background: o ? 'var(--accent)' : 'var(--card)',
-            opacity: o || 1
-          }}
-        />
+      {items.map((item) => (
+        <span key={item.label} style={S.legendItem}>
+          <span style={{ ...S.legendSwatch, background: item.fill }}>
+            {item.bar && <span style={S.legendBar} />}
+          </span>
+          <Data style={S.legendLabel}>{item.label}</Data>
+        </span>
       ))}
-      <span style={S.legendLabel}>More</span>
     </div>
   )
 }
@@ -180,12 +195,7 @@ function DaySheet({ dateKey, habits, isFuture, onToggle, onClose }) {
       ) : (
         <div style={S.sheetList}>
           {habits.map((habit) => (
-            <DayRow
-              key={habit.id}
-              habit={habit}
-              dateKey={dateKey}
-              onToggle={() => onToggle(habit)}
-            />
+            <DayRow key={habit.id} habit={habit} dateKey={dateKey} onToggle={() => onToggle(habit)} />
           ))}
         </div>
       )}
@@ -202,24 +212,20 @@ function DayRow({ habit, dateKey, onToggle, disabled }) {
       onClick={onToggle}
       disabled={disabled}
       aria-pressed={done}
-      style={{ ...S.dayRow, borderLeft: `3px solid ${cat.color}` }}
+      style={{ ...S.dayRow, ...(done ? S.dayRowDone : null) }}
     >
       <span style={{ fontSize: 'var(--fs-xl)' }}>{habit.icon ?? '⭐'}</span>
       <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-        <div style={{ ...S.dayName, textDecoration: done ? 'line-through' : 'none' }}>
-          {habit.name}
-        </div>
+        <div style={S.dayName}>{habit.name}</div>
         <div style={S.dayMeta}>
-          <span style={{ color: cat.color }}>{cat.label}</span>
-          <span> · {describeSchedule(habit.schedule)}</span>
+          {cat.label} · {describeSchedule(habit.schedule)}
         </div>
       </div>
       <span
         style={{
           ...S.check,
-          background: done ? 'var(--accent)' : 'transparent',
-          borderColor: done ? 'var(--accent)' : 'var(--border)',
-          color: done ? 'var(--onAccent)' : 'transparent'
+          borderColor: done ? 'currentColor' : 'var(--border)',
+          color: done ? 'currentColor' : 'transparent'
         }}
       >
         ✓
@@ -230,51 +236,110 @@ function DayRow({ habit, dateKey, onToggle, disabled }) {
 
 const S = {
   nav: { display: 'flex', gap: 6 },
-  weekRow: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 },
+  weekRow: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 8 },
   weekLabel: {
     textAlign: 'center',
+    fontFamily: 'var(--font-mono)',
     fontSize: 'var(--fs-2xs)',
-    fontWeight: 700,
+    fontWeight: 600,
     color: 'var(--textMuted)',
-    letterSpacing: '0.06em'
+    letterSpacing: '0.1em'
   },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 },
   cell: {
+    position: 'relative',
     aspectRatio: '1',
     border: '1px solid',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 0
+    overflow: 'hidden',
+    padding: 0,
+    // Seven per row on a 411px screen; the global 48px min-width would overflow.
+    minWidth: 0,
+    minHeight: 0
   },
-  cellNum: { fontSize: 'var(--fs-sm)', fontWeight: 600 },
+  // A fixed, safe tint for part-done days — never a continuous ramp.
+  cellPart: {
+    position: 'absolute',
+    inset: 0,
+    background: 'var(--text)',
+    opacity: 0.28
+  },
+  cellNum: {
+    position: 'relative',
+    fontFamily: 'var(--font-mono)',
+    fontVariantNumeric: 'tabular-nums',
+    fontSize: 'var(--fs-sm)',
+    fontWeight: 600
+  },
+  // How far through the day got. Scaled, never resized.
+  cellBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 3,
+    background: 'var(--accent)',
+    transformOrigin: 'left'
+  },
   legend: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 4,
-    marginTop: 14
+    gap: 14,
+    marginTop: 16
   },
-  legendLabel: { fontSize: 'var(--fs-3xs)', color: 'var(--textMuted)' },
-  legendSwatch: { width: 12, height: 12, border: '1px solid var(--border)' },
+  legendItem: { display: 'inline-flex', alignItems: 'center', gap: 6 },
+  legendSwatch: {
+    position: 'relative',
+    width: 12,
+    height: 12,
+    border: '1px solid var(--border)',
+    overflow: 'hidden'
+  },
+  legendBar: {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
+    width: '55%',
+    height: 3,
+    background: 'var(--accent)'
+  },
+  legendLabel: {
+    fontSize: 'var(--fs-3xs)',
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: 'var(--textMuted)'
+  },
   sheetNote: { fontSize: 'var(--fs-md)', color: 'var(--textDim)', marginBottom: 12 },
   sheetList: { display: 'flex', flexDirection: 'column', gap: 8 },
   dayRow: {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    background: 'var(--card)',
+    background: 'transparent',
     border: '1px solid var(--border)',
     padding: '10px 12px',
     width: '100%'
   },
-  dayName: { fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--text)' },
-  dayMeta: { fontSize: 'var(--fs-xs)', color: 'var(--textDim)', marginTop: 3 },
+  dayRowDone: { background: 'var(--text)', color: 'var(--onInk)', borderColor: 'var(--text)' },
+  dayName: { fontSize: 'var(--fs-base)', fontWeight: 600 },
+  dayMeta: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    color: 'currentColor',
+    opacity: 0.62,
+    marginTop: 4
+  },
   check: {
     width: 32,
     height: 32,
     flexShrink: 0,
-    border: '2px solid',
+    background: 'transparent',
+    border: '1px solid',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',

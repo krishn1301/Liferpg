@@ -6,18 +6,25 @@
 // sources of truth where the inline copy silently won. Now this file only
 // flips the attribute and lets the stylesheet do the work.
 
-// Per-habit category colours. Identical in both themes so a habit keeps its
-// identity. These stay in JS because they are data — habits reference them by
-// key — not theme chrome.
+// Per-habit category colours — the code strip's alphabet. Identical in both
+// themes so a habit keeps its identity. These stay in JS because they are data
+// — habits reference them by key — not theme chrome.
+//
+// They are fills, never text, and every one clears the 3:1 non-text floor
+// against BOTH grounds. That double constraint pins them into a narrow
+// mid-luminance band (0.11–0.23 relative luminance), which is why there is no
+// bone-white or bright-yellow category here: either would vanish on paper.
+// Eight distinct hues so a strip stays readable as a code; a label always
+// accompanies the colour, so hue is never the sole carrier.
 export const CATEGORY_COLORS = {
-  fitness: '#f97316',
-  education: '#8b5cf6',
-  health: '#22c55e',
-  productivity: '#3b82f6',
-  personal: '#ec4899',
-  mindfulness: '#14b8a6',
-  social: '#fbbf24',
-  creative: '#e11d48'
+  fitness: '#d8232a',
+  education: '#3a67c0',
+  health: '#1c8f6a',
+  productivity: '#6a4bc4',
+  personal: '#b0468f',
+  mindfulness: '#10787e',
+  social: '#94741b',
+  creative: '#c25e10'
 }
 
 export const THEMES = ['dark', 'light']

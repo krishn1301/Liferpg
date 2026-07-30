@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state/StoreProvider'
 import { formatTime, minutesOfDay } from '../domain/dates'
 import { ROUTINE_CATS } from '../domain/constants'
-import { Screen, Button, Sheet, Field, EmptyState, inputStyle } from '../components/ui'
+import { Screen, Button, Sheet, Field, EmptyState, Data, inputStyle } from '../components/ui'
 
 const BLANK = { label: '', start: '08:00', end: '09:00', category: 'morning', note: '' }
 
@@ -35,7 +35,6 @@ export default function MyDay() {
     >
       {blocks.length === 0 ? (
         <EmptyState
-          icon="🕐"
           title="No routine yet"
           hint="Block out the shape of your day — work, meals, training, wind-down."
           action={<Button onClick={() => setEditing({ ...BLANK })}>Add a block</Button>}
@@ -112,30 +111,37 @@ function BlockRow({ block, now, onClick }) {
       onClick={onClick}
       style={{
         ...S.block,
-        borderLeft: `3px solid ${cat.color}`,
         opacity: isPast ? 0.5 : 1,
         borderColor: isNow ? 'var(--accent)' : 'var(--border)'
       }}
     >
       <div style={S.blockTime}>
-        <span style={S.blockStart}>{formatTime(block.start)}</span>
-        <span style={S.blockEnd}>{formatTime(block.end)}</span>
+        <Data style={S.blockStart}>{formatTime(block.start)}</Data>
+        <Data style={S.blockEnd}>{formatTime(block.end)}</Data>
       </div>
       <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
         <div style={S.blockLabel}>{block.label}</div>
         <div style={S.blockMeta}>
-          <span style={{ color: cat.color }}>{cat.label}</span>
-          <span> · {formatDuration(end - start)}</span>
+          {/* The colour is a block beside its own label, never the label's
+              own colour — a category has to survive being read in greyscale. */}
+          <span style={{ ...S.catBlock, background: cat.color }} aria-hidden="true" />
+          {cat.label} · {formatDuration(end - start)}
         </div>
         {block.note && <div style={S.blockNote}>{block.note}</div>}
       </div>
-      {isNow && <span style={S.nowTag}>Now</span>}
+      {isNow && <Data style={S.nowTag}>Now</Data>}
     </button>
   )
 }
 
 function Gap({ minutes }) {
-  return <div style={S.gap}>{formatDuration(minutes)} free</div>
+  return (
+    <div style={S.gap}>
+      <span style={S.gapRule} />
+      <Data style={S.gapLabel}>{formatDuration(minutes)} free</Data>
+      <span style={S.gapRule} />
+    </div>
+  )
 }
 
 function BlockSheet({ draft, onClose, onSave, onDelete }) {
@@ -204,10 +210,12 @@ function BlockSheet({ draft, onClose, onSave, onDelete }) {
                 aria-pressed={on}
                 style={{
                   ...S.catBtn,
-                  borderColor: on ? cat.color : 'var(--border)',
-                  color: on ? cat.color : 'var(--textDim)'
+                  ...(on
+                    ? { background: 'var(--text)', color: 'var(--onInk)', borderColor: 'var(--text)' }
+                    : null)
                 }}
               >
+                <span style={{ ...S.catBlock, background: cat.color }} aria-hidden="true" />
                 {cat.label}
               </button>
             )
@@ -242,47 +250,66 @@ const S = {
     display: 'flex',
     alignItems: 'flex-start',
     gap: 12,
-    background: 'var(--card)',
+    background: 'transparent',
     border: '1px solid var(--border)',
     padding: '12px 14px',
     width: '100%'
   },
+  // A departure column: times in mono so the digits line up down the page.
   blockTime: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
-    gap: 2,
+    gap: 3,
     flexShrink: 0,
-    width: 68
+    width: 72
   },
   blockStart: { fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--text)' },
   blockEnd: { fontSize: 'var(--fs-3xs)', color: 'var(--textMuted)' },
   blockLabel: { fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--text)' },
-  blockMeta: { fontSize: 'var(--fs-xs)', color: 'var(--textDim)', marginTop: 3 },
-  blockNote: { fontSize: 'var(--fs-xs)', color: 'var(--textMuted)', marginTop: 5, lineHeight: 1.5 },
+  blockMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    color: 'var(--textDim)',
+    marginTop: 5
+  },
+  catBlock: { width: 8, height: 8, flexShrink: 0, display: 'inline-block' },
+  blockNote: { fontSize: 'var(--fs-xs)', color: 'var(--textMuted)', marginTop: 6, lineHeight: 1.5 },
   nowTag: {
     fontSize: 'var(--fs-3xs)',
     fontWeight: 700,
     textTransform: 'uppercase',
-    letterSpacing: '0.06em',
+    letterSpacing: '0.12em',
     background: 'var(--accent)',
     color: 'var(--onAccent)',
     padding: '3px 6px',
     flexShrink: 0
   },
-  gap: {
+  gap: { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0' },
+  gapRule: { flex: 1, height: 1, background: 'var(--rule)' },
+  gapLabel: {
     fontSize: 'var(--fs-3xs)',
     color: 'var(--textMuted)',
-    textAlign: 'center',
-    padding: '6px 0',
-    letterSpacing: '0.04em'
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase'
   },
   timeRow: { display: 'flex', gap: 8 },
   catGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 },
   catBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minWidth: 0,
     padding: '10px 4px',
-    border: '1px solid',
+    border: '1px solid var(--border)',
     background: 'transparent',
+    color: 'var(--textDim)',
     fontSize: 'var(--fs-xs)',
     fontWeight: 700
   },

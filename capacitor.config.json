@@ -3,16 +3,16 @@
   "appName": "LifeRPG",
   "webDir": "dist",
   "android": {
-    "backgroundColor": "#0e0e0e"
+    "backgroundColor": "#0a0a0b"
   },
   "plugins": {
     "LocalNotifications": {
       "smallIcon": "ic_stat_icon",
-      "iconColor": "#22c55e"
+      "iconColor": "#e9b417"
     },
     "StatusBar": {
       "style": "DARK",
-      "backgroundColor": "#0e0e0e"
+      "backgroundColor": "#0a0a0b"
     }
   }
 }

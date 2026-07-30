@@ -3,7 +3,8 @@ import { useStore } from '../state/StoreProvider'
 import { useToday } from '../state/useToday'
 import { totalXp, levelFromXp, earnedBadges } from '../domain/xp'
 import { dosesForDay } from '../domain/medicines'
-import { Screen, SectionTitle, Card } from '../components/ui'
+import { Screen, Overline, Panel, Rule, Data } from '../components/ui'
+import { TickScale } from '../components/catalog'
 
 export default function More() {
   const { doc } = useStore()
@@ -18,19 +19,18 @@ export default function More() {
   const links = [
     {
       to: '/calendar',
-      icon: '🗓️',
       label: 'Calendar',
       note: 'Month view and backfilling missed days'
     },
     {
       to: '/medicines',
-      icon: '💊',
       label: 'Medicines',
-      note: dosesLeft ? `${dosesLeft} dose${dosesLeft === 1 ? '' : 's'} left today` : 'Doses and adherence'
+      note: dosesLeft
+        ? `${dosesLeft} dose${dosesLeft === 1 ? '' : 's'} left today`
+        : 'Doses and adherence'
     },
     {
       to: '/settings',
-      icon: '⚙️',
       label: 'Settings',
       note: 'Theme, backup and restore'
     }
@@ -38,101 +38,122 @@ export default function More() {
 
   return (
     <Screen title="More" subtitle={`Level ${level.level} · ${xp} XP`}>
-      <Card style={S.hero}>
+      <Panel style={{ padding: '14px 16px 16px' }}>
         <div style={S.heroTop}>
-          <span style={S.heroLevel}>Lv.{level.level}</span>
-          <span style={S.heroBadges}>
+          <Data style={S.heroLabel}>Level</Data>
+          <Data style={S.heroBadges}>
             {earned} of {badges.length} badges
-          </span>
+          </Data>
         </div>
-        <div style={S.barTrack}>
-          <div style={{ ...S.barFill, transform: `scaleX(${level.current / level.needed})` }} />
-        </div>
-        <div style={S.heroSub}>
+        <div style={S.heroLevel}>{String(level.level).padStart(2, '0')}</div>
+        <TickScale
+          value={level.current / level.needed}
+          label={`Level ${level.level}, ${level.current} of ${level.needed} XP to level ${level.level + 1}`}
+        />
+        <Data style={S.heroSub}>
           {level.current} / {level.needed} to level {level.level + 1}
-        </div>
-      </Card>
+        </Data>
+      </Panel>
 
-      <SectionTitle>Everything else</SectionTitle>
-      <div style={S.list}>
-        {links.map((link) => (
-          <Link key={link.to} to={link.to} style={S.link}>
-            <span style={S.linkIcon}>{link.icon}</span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={S.linkLabel}>{link.label}</span>
-              <span style={S.linkNote}>{link.note}</span>
-            </span>
-            <span style={S.chevron}>›</span>
-          </Link>
-        ))}
-      </div>
-
-      <SectionTitle>Badges</SectionTitle>
-      <div style={S.badges}>
-        {badges.map((badge) => (
-          <div key={badge.id} style={{ ...S.badge, opacity: badge.earned ? 1 : 0.32 }}>
-            <div style={{ fontSize: 'var(--fs-xl)' }}>{badge.icon}</div>
-            <div style={S.badgeLabel}>{badge.label}</div>
+      <Overline>Everything else</Overline>
+      <Panel flush>
+        {links.map((link, i) => (
+          <div key={link.to}>
+            {i > 0 && <Rule />}
+            <Link to={link.to} style={S.link}>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={S.linkLabel}>{link.label}</span>
+                <span style={S.linkNote}>{link.note}</span>
+              </span>
+              <span style={S.chevron} aria-hidden="true">
+                →
+              </span>
+            </Link>
           </div>
         ))}
-      </div>
+      </Panel>
+
+      <Overline>Badges</Overline>
+      <Panel flush>
+        {badges.map((badge, i) => (
+          <div key={badge.id}>
+            {i > 0 && <Rule />}
+            <div style={{ ...S.badge, opacity: badge.earned ? 1 : 0.45 }}>
+              <span
+                style={{
+                  ...S.badgeBlock,
+                  background: badge.earned ? 'var(--accent)' : 'transparent',
+                  borderColor: badge.earned ? 'var(--accent)' : 'var(--border)'
+                }}
+              />
+              <span style={S.badgeLabel}>{badge.label}</span>
+              <Data style={S.badgeState}>{badge.earned ? 'Earned' : 'Locked'}</Data>
+            </div>
+          </div>
+        ))}
+      </Panel>
     </Screen>
   )
 }
 
 const S = {
-  hero: { padding: 14, marginBottom: 4 },
-  heroTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  heroLevel: {
-    color: 'var(--accent)',
-    border: '1px solid var(--accent)',
-    padding: '2px 9px',
-    fontSize: 'var(--fs-xs)',
-    fontWeight: 700,
-    letterSpacing: '0.05em'
+  heroTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' },
+  heroLabel: {
+    fontSize: 'var(--fs-2xs)',
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    color: 'var(--textMuted)'
   },
   heroBadges: {
-    color: 'var(--textDim)',
     fontSize: 'var(--fs-2xs)',
+    letterSpacing: '0.1em',
     textTransform: 'uppercase',
-    letterSpacing: '0.08em'
+    color: 'var(--textDim)'
   },
-  barTrack: {
-    height: 4,
-    background: 'var(--bg)',
-    margin: '10px 0 6px',
-    overflow: 'hidden'
+  heroLevel: {
+    fontSize: 'var(--fs-3xl)',
+    fontWeight: 800,
+    fontStretch: '78%',
+    letterSpacing: '0.02em',
+    lineHeight: 1,
+    margin: '6px 0 12px'
   },
-  barFill: {
-    height: '100%',
-    width: '100%',
-    background: 'var(--accent)',
-    transformOrigin: 'left',
-    transition: 'transform 0.4s'
+  heroSub: {
+    display: 'block',
+    marginTop: 8,
+    fontSize: 'var(--fs-3xs)',
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: 'var(--textMuted)'
   },
-  heroSub: { color: 'var(--textMuted)', fontSize: 'var(--fs-2xs)' },
-  list: { display: 'flex', flexDirection: 'column', gap: 8 },
   link: {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    background: 'var(--card)',
-    border: '1px solid var(--border)',
-    padding: '14px',
+    padding: '14px 16px',
     textDecoration: 'none',
     color: 'var(--text)',
     minHeight: 'var(--touch)'
   },
-  linkIcon: { fontSize: 'var(--fs-xl)', flexShrink: 0 },
   linkLabel: { display: 'block', fontSize: 'var(--fs-base)', fontWeight: 600 },
-  linkNote: { display: 'block', fontSize: 'var(--fs-xs)', color: 'var(--textDim)', marginTop: 3 },
-  chevron: { color: 'var(--textMuted)', fontSize: 'var(--fs-xl)', flexShrink: 0 },
-  badges: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 },
-  badge: {
-    background: 'var(--card)',
-    border: '1px solid var(--border)',
-    padding: '14px 8px',
-    textAlign: 'center'
+  linkNote: {
+    display: 'block',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: 'var(--textDim)',
+    marginTop: 5
   },
-  badgeLabel: { fontSize: 'var(--fs-2xs)', fontWeight: 700, marginTop: 7 }
+  chevron: { color: 'var(--textMuted)', fontSize: 'var(--fs-md)', flexShrink: 0 },
+  badge: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px' },
+  badgeBlock: { width: 12, height: 12, flexShrink: 0, border: '1px solid' },
+  badgeLabel: { flex: 1, minWidth: 0, fontSize: 'var(--fs-md)', fontWeight: 600 },
+  badgeState: {
+    fontSize: 'var(--fs-3xs)',
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: 'var(--textMuted)',
+    flexShrink: 0
+  }
 }

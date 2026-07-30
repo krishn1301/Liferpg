@@ -1,16 +1,30 @@
-// Shared primitives. The design language is the desktop app's: blocky, zero
-// border-radius, monochrome, one emerald accent. Colours come from CSS custom
-// properties so the light/dark swap is a single attribute on <html>.
+// Shared primitives for the catalogue world — see DESIGN.md.
+//
+// Two rules drive nearly everything here:
+//
+//   1. There is no elevation. A `Panel` is a 1px ruled cell on the page's own
+//      black, not a lighter tile floating above it. Nothing has a shadow and
+//      nothing has a radius. (This is why there is no `Card` any more: naming
+//      the container after the thing the world rejects kept re-teaching the
+//      wrong habit.)
+//   2. Emphasis is inversion. The committed state — a primary button, a
+//      finished habit, the selected tab — fills with PULSE and sets its text in
+//      VOID. There is no third accent doing the job of contrast.
 //
 // Font sizes are `var(--fs-*)` tokens, never numbers. A bare number in a React
 // style object becomes px, and px text ignores every text-size preference the
 // user has — see the type scale in theme/global.css.
 
+/**
+ * Screen frame. The header is a catalogue masthead: an engraved condensed
+ * title, a monospace subtitle beneath it, and a rule closing the block off
+ * from the content.
+ */
 export function Screen({ title, subtitle, action, children }) {
   return (
     <div style={S.screen}>
       <header style={S.header}>
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <h1 style={S.title}>{title}</h1>
           {subtitle && <p style={S.subtitle}>{subtitle}</p>}
         </div>
@@ -21,12 +35,25 @@ export function Screen({ title, subtitle, action, children }) {
   )
 }
 
-export function SectionTitle({ children }) {
-  return <h2 style={S.sectionTitle}>{children}</h2>
+/**
+ * Monospace section label. Data-layer type: this names a block of records, so
+ * it is set the same way a column heading is.
+ */
+export function Overline({ children, style }) {
+  return <h2 style={{ ...S.overline, ...style }}>{children}</h2>
 }
 
-export function Card({ children, style }) {
-  return <div style={{ ...S.card, ...style }}>{children}</div>
+/** A ruled cell. `flush` drops the padding for content that rules itself. */
+export function Panel({ children, style, flush = false }) {
+  return <div style={{ ...S.panel, ...(flush ? { padding: 0 } : null), ...style }}>{children}</div>
+}
+
+/**
+ * A separator inside a panel. `--rule` is the quieter of the two hairlines:
+ * `--border` marks where a cell ends, this marks where a record ends.
+ */
+export function Rule({ style }) {
+  return <div style={{ ...S.ruleLine, ...style }} />
 }
 
 export function Button({ children, variant = 'primary', style, ...rest }) {
@@ -37,13 +64,43 @@ export function Button({ children, variant = 'primary', style, ...rest }) {
   )
 }
 
-export function EmptyState({ icon, title, hint, action }) {
+/**
+ * Inline monospace. For anything measured — a count, a time, a dose, a quest
+ * number. Never for prose; that distinction is what stops the mono reading as
+ * a costume.
+ */
+export function Data({ children, style }) {
+  return <span style={{ ...S.data, ...style }}>{children}</span>
+}
+
+/**
+ * A quest number, `Q07`, in its own hairline cell. Every habit carries one:
+ * it is the catalogue's spine, and it is where the RPG vocabulary and the
+ * record-sleeve grammar turn out to be the same idea.
+ */
+export function QuestNumber({ n, style }) {
+  return (
+    <span style={{ ...S.questNumber, ...style }} aria-hidden="true">
+      Q{String(n).padStart(2, '0')}
+    </span>
+  )
+}
+
+/**
+ * Empty state. No emoji: the world's own answer to "nothing here yet" is an
+ * unpressed record — a strip of hollow blocks waiting to be filled.
+ */
+export function EmptyState({ title, hint, action }) {
   return (
     <div style={S.empty}>
-      <div style={{ fontSize: 'var(--fs-4xl)', marginBottom: 12 }}>{icon}</div>
-      <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700 }}>{title}</div>
+      <div style={S.emptyBlocks} aria-hidden="true">
+        {Array.from({ length: 7 }, (_, i) => (
+          <span key={i} style={S.emptyBlock} />
+        ))}
+      </div>
+      <div style={S.emptyTitle}>{title}</div>
       {hint && <div style={S.emptyHint}>{hint}</div>}
-      {action && <div style={{ marginTop: 18 }}>{action}</div>}
+      {action && <div style={{ marginTop: 20 }}>{action}</div>}
     </div>
   )
 }
@@ -107,43 +164,103 @@ const S = {
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 22
+    paddingBottom: 14,
+    marginBottom: 20,
+    borderBottom: '1px solid var(--border)'
   },
-  title: { fontSize: 'var(--fs-2xl)', fontWeight: 800, letterSpacing: '-0.02em' },
-  subtitle: { color: 'var(--textDim)', fontSize: 'var(--fs-md)', marginTop: 4 },
-  sectionTitle: {
-    fontSize: 'var(--fs-2xs)',
-    fontWeight: 700,
+  // Engraved: the width axis pushed to 78%, heavy, uppercase, opened up. This
+  // is the only place the condensed axis is used — body text stays at 100%,
+  // because condensed prose is slower to read and this app is read half awake.
+  title: {
+    fontSize: 'var(--fs-2xl)',
+    fontWeight: 800,
+    fontStretch: '78%',
+    letterSpacing: '0.06em',
     textTransform: 'uppercase',
-    letterSpacing: '0.12em',
-    color: 'var(--textMuted)',
-    margin: '26px 0 10px'
+    lineHeight: 1.05
   },
-  card: {
-    background: 'var(--card)',
+  subtitle: {
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--textDim)',
+    fontSize: 'var(--fs-2xs)',
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    marginTop: 7
+  },
+  overline: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.14em',
+    color: 'var(--textMuted)',
+    // More space above than below: the label belongs to what follows it.
+    margin: '28px 0 10px'
+  },
+  panel: {
+    background: 'transparent',
     border: '1px solid var(--border)',
     padding: 16
   },
+  ruleLine: { height: 1, background: 'var(--rule)' },
   button: {
-    padding: '11px 18px',
+    padding: '12px 18px',
     fontSize: 'var(--fs-sm)',
     fontWeight: 700,
     textTransform: 'uppercase',
-    letterSpacing: '0.06em',
+    letterSpacing: '0.1em',
     borderRadius: 0,
     whiteSpace: 'nowrap'
   },
   buttonVariants: {
-    primary: { background: 'var(--accent)', color: 'var(--onAccent)' },
-    ghost: { background: 'transparent', color: 'var(--textDim)', border: '1px solid var(--border)' },
+    // The committed action is the inverted one — PULSE ground, VOID label.
+    primary: { background: 'var(--text)', color: 'var(--onInk)' },
+    ghost: { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)' },
     danger: { background: 'transparent', color: 'var(--danger)', border: '1px solid var(--danger)' }
   },
-  empty: { textAlign: 'center', padding: '56px 16px', color: 'var(--textMuted)' },
-  emptyHint: { fontSize: 'var(--fs-md)', marginTop: 6, lineHeight: 1.6, color: 'var(--textDim)' },
+  data: {
+    fontFamily: 'var(--font-mono)',
+    fontVariantNumeric: 'tabular-nums',
+    letterSpacing: '0.06em'
+  },
+  questNumber: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-3xs)',
+    fontWeight: 600,
+    letterSpacing: '0.1em',
+    color: 'var(--textMuted)',
+    border: '1px solid var(--rule)',
+    padding: '2px 4px',
+    lineHeight: 1
+  },
+  empty: { textAlign: 'center', padding: '52px 16px' },
+  emptyBlocks: { display: 'flex', gap: 4, justifyContent: 'center', marginBottom: 22 },
+  emptyBlock: {
+    width: 12,
+    height: 12,
+    border: '1px solid var(--border)'
+  },
+  emptyTitle: {
+    fontSize: 'var(--fs-base)',
+    fontWeight: 700,
+    fontStretch: '86%',
+    letterSpacing: '0.03em',
+    textTransform: 'uppercase',
+    color: 'var(--text)'
+  },
+  emptyHint: {
+    fontSize: 'var(--fs-md)',
+    marginTop: 8,
+    lineHeight: 1.6,
+    color: 'var(--textDim)',
+    maxWidth: 34 + 'ch',
+    marginLeft: 'auto',
+    marginRight: 'auto'
+  },
   scrim: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0,0,0,0.6)',
+    background: 'var(--scrim)',
     zIndex: 40
   },
   sheet: {
@@ -152,8 +269,8 @@ const S = {
     right: 0,
     bottom: 0,
     zIndex: 41,
-    background: 'var(--surface)',
-    borderTop: '1px solid var(--border)',
+    background: 'var(--panel)',
+    borderTop: '1px solid var(--text)',
     maxHeight: '85vh',
     overflowY: 'auto',
     paddingBottom: 'var(--safe-bottom)'
@@ -162,17 +279,18 @@ const S = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '14px 16px',
+    padding: '12px 16px',
     borderBottom: '1px solid var(--border)',
     position: 'sticky',
     top: 0,
-    background: 'var(--surface)'
+    background: 'var(--panel)'
   },
   sheetTitle: {
-    fontSize: 'var(--fs-xs)',
-    fontWeight: 700,
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    fontWeight: 600,
     textTransform: 'uppercase',
-    letterSpacing: '0.1em',
+    letterSpacing: '0.14em',
     color: 'var(--textDim)'
   },
   sheetClose: { color: 'var(--textDim)', fontSize: 'var(--fs-base)' },
@@ -180,7 +298,7 @@ const S = {
   sheetFooter: {
     position: 'sticky',
     bottom: 0,
-    background: 'var(--surface)',
+    background: 'var(--panel)',
     borderTop: '1px solid var(--border)',
     padding: '12px 16px',
     display: 'flex',
@@ -189,11 +307,12 @@ const S = {
   field: { display: 'block', marginBottom: 16 },
   fieldLabel: {
     display: 'block',
+    fontFamily: 'var(--font-mono)',
     fontSize: 'var(--fs-2xs)',
-    fontWeight: 700,
+    fontWeight: 600,
     textTransform: 'uppercase',
-    letterSpacing: '0.08em',
+    letterSpacing: '0.14em',
     color: 'var(--textDim)',
-    marginBottom: 7
+    marginBottom: 8
   }
 }

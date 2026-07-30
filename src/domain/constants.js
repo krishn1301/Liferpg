@@ -25,13 +25,15 @@ export const MED_TIMES = [
   { key: '22:00', label: 'Night', icon: '🌙' }
 ]
 
+// Routine-block colours, drawn from the same mid-luminance band as
+// CATEGORY_COLORS so a block reads on both grounds. See theme/tokens.js.
 export const ROUTINE_CATS = {
-  morning: { label: 'Morning', color: '#fbbf24' },
-  work: { label: 'Work', color: '#3b82f6' },
-  exercise: { label: 'Exercise', color: '#f97316' },
-  meal: { label: 'Meal', color: '#22c55e' },
-  personal: { label: 'Personal', color: '#ec4899' },
-  evening: { label: 'Evening', color: '#8b5cf6' }
+  morning: { label: 'Morning', color: '#94741b' },
+  work: { label: 'Work', color: '#3a67c0' },
+  exercise: { label: 'Exercise', color: '#d8232a' },
+  meal: { label: 'Meal', color: '#1c8f6a' },
+  personal: { label: 'Personal', color: '#b0468f' },
+  evening: { label: 'Evening', color: '#6a4bc4' }
 }
 
 export const MAX_HABITS = 99

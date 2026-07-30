@@ -107,7 +107,9 @@ describe('App', () => {
     )
     await click(checkbox)
     expect(second.container.textContent).toContain('10 XP')
-    expect(second.container.textContent).toContain('100%')
+    // The day's code strip replaced the completion percentage: one block per
+    // habit due today, with the count spelled out beside it.
+    expect(second.container.textContent).toContain('1 / 1 done')
     second.unmount()
   })
 })
@@ -140,6 +142,65 @@ describe('every route renders', () => {
   it('shows the not-found screen for an unknown route', async () => {
     const { container, unmount } = await render('#/nope')
     expect(container.textContent).toContain('Not found')
+    unmount()
+  })
+})
+
+// The reward moments are the whole reason this is a *gamified* tracker rather
+// than a checklist. They also have arithmetic in them, which is the part that
+// silently goes wrong.
+describe('reward moments', () => {
+  beforeEach(() => store.clear())
+
+  /** A daily habit sitting on `n` completions, none of them today. */
+  const seedXp = (n) => {
+    const completions = {}
+    for (let i = 1; i <= n; i++) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      completions[key] = true
+    }
+    store.set(
+      'liferpg.doc.v1',
+      JSON.stringify({
+        habits: [
+          { id: 1, name: 'Tuition', icon: '📚', category: 'education', schedule: { type: 'daily' }, completions }
+        ],
+        medicines: [],
+        routineBlocks: [],
+        dailyLogs: {},
+        settings: { theme: 'dark' }
+      })
+    )
+  }
+
+  it('presents a catalogue card, with the right price, on crossing a level', async () => {
+    seedXp(9) // 90 XP — one completion short of level 2
+    const { container, unmount } = await render()
+
+    expect(container.textContent).not.toContain('Level reached')
+
+    await click(
+      [...container.querySelectorAll('button')].find((b) =>
+        b.getAttribute('aria-label')?.startsWith('Mark Tuition done')
+      )
+    )
+
+    expect(container.textContent).toContain('Level reached')
+    // levelCost(1), not levelCost(2): the card names what this level cost,
+    // not what the next one will.
+    expect(container.textContent).toContain('That level cost 100 XP')
+    expect(container.textContent).toContain('The next one costs 200')
+    unmount()
+  })
+
+  it('stays quiet when a saved document simply already has levels', async () => {
+    seedXp(40) // 400 XP, comfortably past level 2 — but nothing happened *now*
+    const { container, unmount } = await render()
+
+    expect(container.textContent).not.toContain('Level reached')
+    expect(container.textContent).not.toContain('Badge earned')
     unmount()
   })
 })

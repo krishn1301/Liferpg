@@ -5,10 +5,10 @@ import { Screen, EmptyState } from '../components/ui'
  * the tabs — a tester who taps Stats should learn it's coming, not wonder if
  * the app is broken.
  */
-export default function Placeholder({ title, icon, note }) {
+export default function Placeholder({ title, note }) {
   return (
     <Screen title={title}>
-      <EmptyState icon={icon} title="Coming soon" hint={note} />
+      <EmptyState title="Coming soon" hint={note} />
     </Screen>
   )
 }
