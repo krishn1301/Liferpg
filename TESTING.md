@@ -30,10 +30,19 @@ The one check that catches an entire class of bug.
 - [ ] **First launch shows the new version** — check Settings for the version
       string, and Today for whatever the release added.
 
+- [ ] **The app is not stuck on a blank screen.** White rather than the app's
+      black means nothing rendered at all.
+
 If the first launch shows the *previous* build, a service worker is serving a
 cached copy of an APK that is no longer on disk. This happened going 0.1.0 →
 0.3.0 and is why native builds now ship a self-destroying worker
 (`selfDestroying` in `vite.config.js`). A regression here means that broke.
+
+If the first launch is **blank white**, the worker is in a reload loop: the
+registration script re-registers a worker that unregisters itself and navigates,
+forever. That is what v0.3.1 shipped, and it is why `injectRegister` is `null`
+for native builds. It is invisible in every browser and every unit test — this
+checklist item is the only thing that catches it.
 
 ## 2. Reminders
 
