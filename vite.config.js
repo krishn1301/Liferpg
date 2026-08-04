@@ -22,7 +22,8 @@ export default defineConfig({
       manifest: {
         name: 'LifeRPG',
         short_name: 'LifeRPG',
-        description: 'Gamified offline habit tracker with streaks, XP, medicines and daily routine.',
+        description:
+          'Gamified offline habit tracker: streaks, XP, vows you keep by not slipping, medicines, and an end-of-day log.',
         theme_color: '#0a0a0b',
         background_color: '#0a0a0b',
         display: 'standalone',
