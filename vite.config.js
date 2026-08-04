@@ -41,20 +41,18 @@ export default defineConfig(({ mode }) => ({
       // phone in place forever. This ships a worker whose only job is to
       // unregister itself and delete its caches.
       selfDestroying: mode === 'capacitor',
-      // And no registration script, which is not optional — v0.3.1 shipped
-      // without this and white-screened the app on a real phone.
+      // And no registration script. `selfDestroying` still injects registerSW.js
+      // by default, which registers a worker whose entire job is to unregister
+      // itself — pointless at best, and it re-arms on every load a worker that
+      // also calls client.navigate(), which is the shape of a reload loop.
       //
-      // `selfDestroying` still injects registerSW.js by default. That script
-      // registers the worker on every load; the worker unregisters itself and
-      // calls client.navigate() to reload the page; the reloaded page runs
-      // registerSW.js again. An infinite reload loop, and a blank screen
-      // because the page never finishes loading.
-      //
-      // Leaving it out breaks the cycle *and* still tears down old workers.
-      // A phone upgrading from a build that had one loads that build's cached
+      // Leaving it out costs nothing and still tears down old workers. A phone
+      // upgrading from a build that had one loads that build's cached
       // index.html, whose own registerSW.js pulls in this self-destroying
       // worker — which unregisters, navigates, and lands on this build's
       // index.html, where there is no registration script left to start again.
+      // Verified by upgrading a Galaxy S9+ from a build with a live worker:
+      // the first launch showed the new version.
       injectRegister: mode === 'capacitor' ? null : 'auto',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
       manifest: {
