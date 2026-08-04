@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../state/StoreProvider'
 import { useToday } from '../state/useToday'
 import { applyTheme, THEMES } from '../theme/tokens'
@@ -7,6 +7,13 @@ import { convertDesktopSave, describeImport, isDesktopSave } from '../platform/i
 import { exportExcel } from '../platform/excel'
 import { platform } from '../platform/storage'
 import { canRemind, isIOS, isStandalone } from '../platform/device'
+import {
+  pendingCount,
+  reminderPermission,
+  requestReminderPermission,
+  syncReminders
+} from '../platform/reminders'
+import { plannedReminders, MAX_PENDING } from '../domain/reminders'
 import { Screen, Overline, Button, Sheet, Panel, Segmented } from '../components/ui'
 
 const VERSION = __APP_VERSION__
@@ -97,15 +104,13 @@ export default function Settings() {
       <Overline>Reminders</Overline>
       <Panel>
         {canRemind ? (
-          <p style={{ ...S.body, marginBottom: 0 }}>
-            This build can post reminders. Turn them on per habit when you add or edit one.
-          </p>
+          <RemindersPanel habits={doc.habits} today={today} />
         ) : (
           // Said plainly rather than shown as a switch that quietly does
-          // nothing. iOS Safari has no way to schedule a local notification,
+          // nothing. A browser has no way to schedule a local notification,
           // and Web Push would need a server this app deliberately doesn't have.
           <p style={{ ...S.body, marginBottom: 0 }}>
-            Reminders only work in the Android app. {isIOS ? 'On iPhone, ' : 'In a browser, '}
+            Reminders need the installed app. {isIOS ? 'On iPhone, ' : 'In a browser, '}
             there is no way to schedule a notification without a server, and LifeRPG keeps
             everything on your device. Nothing here is switched off — the capability isn&apos;t
             there to switch on.
@@ -149,8 +154,8 @@ export default function Settings() {
       <Overline>Spreadsheet</Overline>
       <Panel>
         <p style={S.body}>
-          A colour-coded grid of every habit against every day, plus per-habit stats — the same
-          three sheets the desktop app produced.
+          A colour-coded grid of every habit against every day, per-habit stats, and your daily log
+          — the desktop app&apos;s three sheets plus one.
         </p>
         <Button variant="ghost" onClick={onExportExcel} disabled={busy} style={{ width: '100%' }}>
           {busy ? 'Building…' : 'Export Excel'}
@@ -275,6 +280,80 @@ function DesktopSummary({ summary }) {
         <p style={S.body}>
           That works out to <strong>{summary.derivedXp} XP</strong>.
         </p>
+      )}
+    </>
+  )
+}
+
+/**
+ * What the reminder system is actually doing right now.
+ *
+ * This panel used to say "This build can post reminders. Turn them on per habit
+ * when you add or edit one." — which was untrue for months: nothing scheduled
+ * anything. It now reports real state, because the failure everyone hits with
+ * notifications is that they were denied once at the OS level and the app never
+ * mentions it again.
+ */
+function RemindersPanel({ habits, today }) {
+  const [permission, setPermission] = useState('unavailable')
+  const [pending, setPending] = useState(0)
+
+  const planned = useMemo(() => plannedReminders(habits, today).length, [habits, today])
+  const withTimes = habits.filter((h) => (h.reminders ?? []).length > 0).length
+
+  // Bumped to re-read after the user grants permission, since neither the OS
+  // permission nor the pending count is React state we can derive.
+  const [tick, setTick] = useState(0)
+  const refresh = useCallback(() => setTick((n) => n + 1), [])
+
+  useEffect(() => {
+    // `cancelled` matters: both reads cross a native bridge, and leaving Settings
+    // mid-flight would otherwise set state on an unmounted component.
+    let cancelled = false
+    ;(async () => {
+      const [display, queued] = await Promise.all([reminderPermission(), pendingCount()])
+      if (cancelled) return
+      setPermission(display)
+      setPending(queued)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [habits, tick])
+
+  const granted = permission === 'granted'
+
+  return (
+    <>
+      <p style={S.body}>
+        {withTimes === 0
+          ? 'No habit has a reminder time yet. Add one when you edit a habit.'
+          : granted
+            ? `${withTimes} habit${withTimes === 1 ? '' : 's'} set to remind you. ${pending} notification${pending === 1 ? '' : 's'} queued.`
+            : `${withTimes} habit${withTimes === 1 ? '' : 's'} have reminder times saved, but notifications are turned off, so nothing will be posted.`}
+      </p>
+
+      {/* The plan is capped because iOS holds only 64 pending notifications per
+          app. Say so rather than let someone wonder why next month is silent. */}
+      {granted && planned >= MAX_PENDING && (
+        <p style={S.body}>
+          The queue is full at {MAX_PENDING}, which covers the next few days. It refills every time
+          you open the app.
+        </p>
+      )}
+
+      {!granted && (
+        <Button
+          variant="ghost"
+          style={{ width: '100%' }}
+          onClick={async () => {
+            await requestReminderPermission()
+            await syncReminders(habits, today)
+            refresh()
+          }}
+        >
+          Allow notifications
+        </Button>
       )}
     </>
   )

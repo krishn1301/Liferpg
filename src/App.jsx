@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { App as CapApp } from '@capacitor/app'
 import { StoreProvider, useStore } from './state/StoreProvider'
+import { useReminders } from './state/useReminders'
 import { requestPersistentStorage } from './platform/device'
 import BottomTabs, { TABS } from './components/BottomTabs'
 import { CatalogCard } from './components/catalog'
@@ -38,7 +39,11 @@ export default function App() {
 }
 
 function Shell() {
-  const { ready } = useStore()
+  const { doc, ready } = useStore()
+
+  // Mounted at the shell, above the router, so the notification queue tracks
+  // the document no matter which screen a habit was edited from.
+  useReminders(doc.habits, ready)
 
   // Rendering the app against an empty document and then swapping in the real
   // one makes every list flash. Waiting one frame for storage is cheaper.

@@ -41,6 +41,15 @@ export const ROUTINE_CATS = {
 
 export const MAX_HABITS = 99
 
+/** The top of the mood and energy scales. Five points, so a tap picks one. */
+export const LOG_SCALE = 5
+
+/**
+ * Glasses of water a day. A target, not a rule — nothing is scored against it
+ * and no badge depends on it; it exists so the counter has something to fill.
+ */
+export const WATER_TARGET = 8
+
 /**
  * Starter packs for onboarding. A tester who has to invent five habits before
  * seeing anything usually invents zero and closes the app.

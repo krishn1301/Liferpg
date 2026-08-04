@@ -1,4 +1,5 @@
 import { normalizeSchedule } from '../domain/schedule'
+import { normalizeReminders } from '../domain/reminders'
 import { HABIT_KINDS } from '../domain/quit'
 import { todayKey } from '../domain/dates'
 import { MAX_HABITS } from '../domain/constants'
@@ -51,11 +52,14 @@ function normalizeHabit(habit) {
     archived: false,
     completions: {},
     skips: {},
-    reminders: [],
     createdKey: null,
     ...habit,
     // Habits written before schedules existed have no `schedule` field at all.
-    schedule: normalizeSchedule(habit.schedule)
+    schedule: normalizeSchedule(habit.schedule),
+    // Deduped, ordered, and validated as HH:MM. A restored backup is the one
+    // place a malformed time can get in, and an Invalid Date reaching the OS
+    // scheduler fails silently rather than loudly.
+    reminders: normalizeReminders(habit.reminders)
   }
 }
 

@@ -53,9 +53,17 @@ describe('exportDates', () => {
 })
 
 describe('workbook structure', () => {
-  it('has the three sheets the desktop app produced', async () => {
+  it('has the desktop app three sheets, plus the daily log', async () => {
+    // The three-sheet shape was worth preserving while this was a straight
+    // port. It is not worth an export that silently drops mood, energy, water
+    // and notes, so Daily Log was added and this assertion moved with it.
     const wb = await buildWorkbook(docWith([habit()]), SUN)
-    expect(wb.worksheets.map((s) => s.name)).toEqual(['Daily Habits', 'Statistics', 'Config'])
+    expect(wb.worksheets.map((s) => s.name)).toEqual([
+      'Daily Habits',
+      'Statistics',
+      'Daily Log',
+      'Config'
+    ])
   })
 
   it('leaves archived habits out of every sheet', async () => {
@@ -70,7 +78,43 @@ describe('workbook structure', () => {
 
   it('survives an empty document', async () => {
     const wb = await buildWorkbook(emptyDoc(), SUN)
-    expect(wb.worksheets).toHaveLength(3)
+    expect(wb.worksheets).toHaveLength(4)
+  })
+})
+
+describe('the daily log sheet', () => {
+  const withLogs = (dailyLogs) => ({ ...docWith([habit()]), dailyLogs })
+
+  it('writes one row per logged day and skips the rest', async () => {
+    const wb = await buildWorkbook(
+      withLogs({
+        [MON]: { mood: 4, energy: 3, water: 6, note: 'Good start' },
+        '2026-06-05': { mood: 2 }
+      }),
+      SUN
+    )
+    const sheet = wb.getWorksheet('Daily Log')
+
+    // Header plus two logged days — the five days with nothing on them are not
+    // rows of zeroes.
+    expect(sheet.rowCount).toBe(3)
+    expect(rowValues(sheet, 2)).toEqual([MON, 4, 3, 6, 'Good start'])
+  })
+
+  it('leaves an unrecorded field blank rather than zero', async () => {
+    // A mood of 0 is not the same fact as no mood, and the two must not average
+    // together — see domain/daily.js.
+    const wb = await buildWorkbook(withLogs({ [MON]: { energy: 5 } }), SUN)
+    const row = wb.getWorksheet('Daily Log').getRow(2)
+
+    expect(row.getCell('energy').value).toBe(5)
+    expect(row.getCell('mood').value).toBeFalsy()
+    expect(row.getCell('water').value).toBeFalsy()
+  })
+
+  it('ignores a day that only holds medicine doses', async () => {
+    const wb = await buildWorkbook(withLogs({ [MON]: { meds: { 'm1@08:00': true } } }), SUN)
+    expect(wb.getWorksheet('Daily Log').rowCount).toBe(1)
   })
 })
 

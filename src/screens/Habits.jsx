@@ -3,8 +3,10 @@ import { useStore } from '../state/StoreProvider'
 import { useToday } from '../state/useToday'
 import { describeSchedule, DAY_LABELS } from '../domain/schedule'
 import { HABIT_KINDS, isVow, cleanStreak, relapseKeys } from '../domain/quit'
-import { fromDateKey } from '../domain/dates'
+import { formatTime, fromDateKey } from '../domain/dates'
 import { CATEGORIES, ICONS, categoryOf, MAX_HABITS } from '../domain/constants'
+import { canRemind, isIOS } from '../platform/device'
+import { requestReminderPermission } from '../platform/reminders'
 import {
   Screen,
   Button,
@@ -13,6 +15,7 @@ import {
   EmptyState,
   QuestNumber,
   Segmented,
+  Data,
   inputStyle
 } from '../components/ui'
 import { CodeStrip, stripDays, vowStripDays } from '../components/catalog'
@@ -216,11 +219,96 @@ function HabitSheet({ draft, today, onClose, onSave, onUnrelapse, onDelete }) {
       {vow ? (
         <VowEditor local={local} today={today} set={set} onRemoveRelapse={removeRelapse} />
       ) : (
-        <Field label="Repeat">
-          <ScheduleEditor schedule={schedule} onChange={(s) => set({ schedule: s })} />
-        </Field>
+        <>
+          <Field label="Repeat">
+            <ScheduleEditor schedule={schedule} onChange={(s) => set({ schedule: s })} />
+          </Field>
+
+          {/* Not offered for a vow: there is nothing to be nudged to do, and a
+              notification saying "No smoking" at 8pm every day is a reminder of
+              the thing you are trying not to think about. */}
+          <ReminderEditor
+            times={local.reminders ?? []}
+            onChange={(reminders) => set({ reminders })}
+          />
+        </>
       )}
     </Sheet>
+  )
+}
+
+/**
+ * Reminder times for one habit.
+ *
+ * Permission is asked the first time a time is added — not at launch, and not
+ * when the sheet opens. A notification prompt fired before the user has asked
+ * for notifications is how an app collects a permanent Deny it can never
+ * recover from.
+ */
+function ReminderEditor({ times, onChange }) {
+  const [draft, setDraft] = useState('08:00')
+  const [denied, setDenied] = useState(false)
+
+  if (!canRemind) {
+    return (
+      <Field label="Remind me">
+        {/* Said plainly rather than shown as a control that quietly does
+            nothing — see DESIGN.md, "Platform truth". */}
+        <p style={S.scheduleHint}>
+          Reminders need the installed app. {isIOS ? 'Safari on iPhone' : 'A browser'} cannot
+          schedule a notification without a server.
+        </p>
+      </Field>
+    )
+  }
+
+  const add = async () => {
+    if (!draft || times.includes(draft)) return
+    const granted = await requestReminderPermission()
+    setDenied(!granted)
+    // The time is stored either way. Permission can be turned back on in system
+    // settings later, and throwing away what the user typed because the OS said
+    // no is punishing them for the platform's answer.
+    onChange([...times, draft].sort())
+  }
+
+  return (
+    <Field label="Remind me">
+      <div style={S.remindRow}>
+        <input
+          type="time"
+          style={{ ...inputStyle, flex: 1 }}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+        />
+        <Button variant="ghost" onClick={add} disabled={!draft || times.includes(draft)}>
+          Add
+        </Button>
+      </div>
+
+      {times.length > 0 && (
+        <div style={S.timePills}>
+          {times.map((time) => (
+            <button
+              key={time}
+              onClick={() => onChange(times.filter((t) => t !== time))}
+              style={S.timePill}
+              aria-label={`Remove the ${formatTime(time)} reminder`}
+            >
+              <Data>{formatTime(time)}</Data>
+              <span aria-hidden="true">✕</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {denied && (
+        <p style={{ ...S.scheduleHint, color: 'var(--danger)' }}>
+          Notifications are turned off for LifeRPG. These times are saved, but nothing will be
+          posted until you allow notifications in system settings.
+        </p>
+      )}
+    </Field>
   )
 }
 
@@ -399,6 +487,22 @@ const S = {
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius-sm)',
     background: 'var(--input)'
+  },
+  remindRow: { display: 'flex', gap: 8, alignItems: 'stretch' },
+  timePills: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  timePill: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    // Under the 48dp floor on purpose: these sit in a wrapping row inside a
+    // sheet, and full-size targets would push the form below the keyboard.
+    minHeight: 34,
+    minWidth: 0,
+    padding: '0 12px',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-pill)',
+    color: 'var(--textDim)',
+    fontSize: 'var(--fs-2xs)'
   },
   slipList: { display: 'flex', flexDirection: 'column' },
   slipRow: {
