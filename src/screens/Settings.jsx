@@ -7,7 +7,7 @@ import { convertDesktopSave, describeImport, isDesktopSave } from '../platform/i
 import { exportExcel } from '../platform/excel'
 import { platform } from '../platform/storage'
 import { canRemind, isIOS, isStandalone } from '../platform/device'
-import { Screen, Overline, Button, Sheet, Panel } from '../components/ui'
+import { Screen, Overline, Button, Sheet, Panel, Segmented } from '../components/ui'
 
 const VERSION = __APP_VERSION__
 
@@ -88,18 +88,11 @@ export default function Settings() {
   return (
     <Screen title="Settings" subtitle={`LifeRPG ${VERSION} · ${platform}`}>
       <Overline>Appearance</Overline>
-      <div style={S.segmented}>
-        {THEMES.map((mode) => (
-          <button
-            key={mode}
-            onClick={() => setTheme(mode)}
-            aria-pressed={theme === mode}
-            style={{ ...S.segment, ...(theme === mode ? S.selected : null) }}
-          >
-            {mode}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        options={THEMES.map((mode) => ({ key: mode, label: mode }))}
+        value={theme}
+        onChange={setTheme}
+      />
 
       <Overline>Reminders</Overline>
       <Panel>
@@ -156,8 +149,8 @@ export default function Settings() {
       <Overline>Spreadsheet</Overline>
       <Panel>
         <p style={S.body}>
-          A colour-coded grid of every habit against every day, plus per-habit stats — the
-          same three sheets the desktop app produced.
+          A colour-coded grid of every habit against every day, plus per-habit stats — the same
+          three sheets the desktop app produced.
         </p>
         <Button variant="ghost" onClick={onExportExcel} disabled={busy} style={{ width: '100%' }}>
           {busy ? 'Building…' : 'Export Excel'}
@@ -217,8 +210,8 @@ export default function Settings() {
             </>
           )}
           <p style={S.body}>
-            This <strong>replaces</strong> everything currently on this device. Your present data
-            is not merged and cannot be recovered afterwards.
+            This <strong>replaces</strong> everything currently on this device. Your present data is
+            not merged and cannot be recovered afterwards.
           </p>
         </Sheet>
       )}
@@ -288,19 +281,6 @@ function DesktopSummary({ summary }) {
 }
 
 const S = {
-  segmented: { display: 'flex', border: '1px solid var(--border)' },
-  segment: {
-    flex: 1,
-    minWidth: 0,
-    padding: '12px 4px',
-    background: 'transparent',
-    color: 'var(--textDim)',
-    fontSize: 'var(--fs-xs)',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em'
-  },
-  selected: { background: 'var(--text)', color: 'var(--onInk)' },
   body: { fontSize: 'var(--fs-md)', color: 'var(--textDim)', lineHeight: 1.6, marginBottom: 14 },
   summary: {
     fontFamily: 'var(--font-mono)',

@@ -132,12 +132,7 @@ describe('convertDesktopSave', () => {
 
   it('preserves icons and categories', () => {
     expect(doc.habits.map((h) => h.icon)).toEqual(['📚', '🍎', '💧', '💪'])
-    expect(doc.habits.map((h) => h.category)).toEqual([
-      'personal',
-      'health',
-      'health',
-      'fitness'
-    ])
+    expect(doc.habits.map((h) => h.category)).toEqual(['personal', 'health', 'health', 'fitness'])
   })
 
   it('produces a document the rest of the app can use unchanged', () => {

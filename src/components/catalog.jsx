@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { addDays } from '../domain/dates'
 import { isDueOn, normalizeSchedule, SCHEDULE_TYPES } from '../domain/schedule'
+import { yearProgress, yearBlocks } from '../domain/year'
 import { levelCost } from '../domain/xp'
 
 /**
@@ -32,6 +33,26 @@ export function stripDays(habit, todayKey, n = 7) {
 }
 
 /**
+ * A vow's last `n` days: an unbroken run of pressed blocks, with the days it
+ * was broken pressed in `--danger` instead.
+ *
+ * There is no "missed" state here and there cannot be one. A vow is kept by
+ * default — every day you did not slip is a day you held it — so a hollow block
+ * would be accusing someone of failing to confirm something they never had to
+ * confirm. Days before the vow existed are `off`, same as anywhere else.
+ */
+export function vowStripDays(habit, todayKey, n = 7) {
+  const start = habit?.createdKey
+
+  return Array.from({ length: n }, (_, i) => {
+    const key = addDays(todayKey, i - (n - 1))
+    if (habit?.relapses?.[key]) return { key, state: 'done', color: 'var(--danger)' }
+    if (start && key < start) return { key, state: 'off' }
+    return { key, state: 'done' }
+  })
+}
+
+/**
  * The code strip. A run of blocks reading left→right over recent days:
  *
  *   solid block   done
@@ -41,6 +62,11 @@ export function stripDays(habit, todayKey, n = 7) {
  * State is carried by *shape* first and hue second, so the strip survives
  * colour blindness, a greyscale screenshot, and the light theme. Colour says
  * which category; shape says what happened.
+ *
+ * A day may override the strip's colour (`d.color`) — the one use is a vow's
+ * relapse day, which is pressed in `--danger`. That is a hue-only distinction,
+ * so it is never the sole carrier of meaning: the row spells out the run length
+ * in words beside it, and the spoken summary counts the slips.
  *
  * The whole strip is one `img` with a spoken summary — seven separate blocks
  * announced individually is noise, not information.
@@ -57,36 +83,91 @@ export function CodeStrip({ days, color, size = 11, gap = 3, label }) {
 
   return (
     <span style={{ display: 'inline-flex', gap }} role="img" aria-label={summary}>
-      {days.map((d) => (
-        <span
-          key={d.key}
-          style={{
-            width: size,
-            height: size,
-            flexShrink: 0,
-            display: 'inline-block',
-            position: 'relative',
-            background: d.state === 'done' ? color : 'transparent',
-            border: `1px solid ${
-              d.state === 'done' ? color : d.state === 'missed' ? 'var(--border)' : 'var(--rule)'
-            }`
-          }}
-        >
-          {d.state === 'off' && (
-            <span
-              style={{
-                position: 'absolute',
-                inset: 0,
-                margin: 'auto',
-                width: 2,
-                height: 2,
-                background: 'var(--textMuted)'
-              }}
-            />
-          )}
-        </span>
-      ))}
+      {days.map((d) => {
+        const fill = d.color ?? color
+        return (
+          <span
+            key={d.key}
+            style={{
+              width: size,
+              height: size,
+              flexShrink: 0,
+              display: 'inline-block',
+              position: 'relative',
+              background: d.state === 'done' ? fill : 'transparent',
+              border: `1px solid ${
+                d.state === 'done' ? fill : d.state === 'missed' ? 'var(--border)' : 'var(--rule)'
+              }`
+            }}
+          >
+            {d.state === 'off' && (
+              <span
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  margin: 'auto',
+                  width: 2,
+                  height: 2,
+                  background: 'var(--textMuted)'
+                }}
+              />
+            )}
+          </span>
+        )
+      })}
     </span>
+  )
+}
+
+/**
+ * The year, in the code strip's own alphabet: 52 blocks, one per week, filled
+ * for the weeks gone, ENERGY for the week you are in, hollow for what is left.
+ *
+ * The blocks flex rather than taking a fixed width. 52 fixed 5px blocks plus
+ * their gaps overflow a 411px panel by a few pixels, and a strip that wraps to
+ * a second line stops being a bar you read in one glance.
+ *
+ * It is the one place in the app that measures something you are not doing:
+ * every other number here is a thing you did. That is the point — it is on
+ * Today because the days left are the reason the rest of the screen matters.
+ */
+export function YearStrip({ dateKey, style }) {
+  const { year, left, pct } = yearProgress(dateKey)
+  const blocks = yearBlocks(dateKey)
+
+  return (
+    <div style={{ ...C.year, ...style }}>
+      <div style={C.yearHead}>
+        <span style={C.yearLabel}>{year}</span>
+        <span style={C.yearLeft}>
+          {left} {left === 1 ? 'day' : 'days'} left
+        </span>
+      </div>
+      <div
+        style={C.yearBlocks}
+        role="img"
+        aria-label={`${year} is ${pct}% gone — ${left} days left in the year`}
+      >
+        {blocks.map((b) => (
+          <span
+            key={b.key}
+            style={{
+              ...C.yearBlock,
+              background: b.state === 'done' ? 'var(--textMuted)' : 'transparent',
+              borderColor:
+                b.state === 'current'
+                  ? 'var(--accent)'
+                  : b.state === 'done'
+                    ? 'var(--textMuted)'
+                    : 'var(--rule)',
+              // The current week is the only filled ENERGY mark on the screen
+              // that is not something you earned, so it is a ring, not a block.
+              boxShadow: b.state === 'current' ? 'inset 0 0 0 2px var(--accent)' : undefined
+            }}
+          />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -102,7 +183,7 @@ export function CodeStrip({ days, color, size = 11, gap = 3, label }) {
  *
  * @param weeks  Array of weeks, oldest first. Each week is 7 numbers in 0..1.
  */
-export function Pulsar({ weeks, height = 170, stroke = 'var(--text)' }) {
+export function Pulsar({ weeks, height = 170, stroke = 'var(--text)', ground = 'var(--panel)' }) {
   const paths = useMemo(() => {
     if (!weeks.length) return []
 
@@ -156,8 +237,10 @@ export function Pulsar({ weeks, height = 170, stroke = 'var(--text)' }) {
     >
       {paths.map((p, i) => (
         <g key={i}>
-          {/* Ground-coloured fill first: this is what hides the ridge behind. */}
-          <path d={p.fill} fill="var(--bg)" />
+          {/* Ground-coloured fill first: this is what hides the ridge behind.
+              It has to match whatever the plot is sitting on — a `--bg` fill on
+              a `--panel` card paints a dark wedge under every ridge. */}
+          <path d={p.fill} fill={ground} />
           <path
             d={p.line}
             fill="none"
@@ -173,6 +256,39 @@ export function Pulsar({ weeks, height = 170, stroke = 'var(--text)' }) {
 }
 
 const C = {
+  year: { marginBottom: 20 },
+  yearHead: {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 8
+  },
+  yearLabel: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    fontWeight: 600,
+    letterSpacing: '0.18em',
+    color: 'var(--textDim)'
+  },
+  yearLeft: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    fontWeight: 600,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    color: 'var(--textMuted)'
+  },
+  yearBlocks: { display: 'flex', gap: 2 },
+  // Square, like every other mark in the notation — see DESIGN.md, "Containers
+  // round; data stays geometric".
+  yearBlock: {
+    flex: 1,
+    minWidth: 0,
+    height: 14,
+    border: '1px solid',
+    boxSizing: 'border-box'
+  },
   scrim: {
     position: 'fixed',
     inset: 0,
@@ -216,6 +332,7 @@ const C = {
   block: { width: 14, height: 14, background: 'var(--accent)' },
   dismiss: {
     border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-pill)',
     background: 'transparent',
     color: 'var(--text)',
     padding: '12px 30px',

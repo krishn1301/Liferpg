@@ -6,7 +6,19 @@ import { MED_TIMES } from '../domain/constants'
 import { DAY_LABELS, describeSchedule } from '../domain/schedule'
 import { adherence, describeDoses, doseId, dosesForDay, isCourseActive } from '../domain/medicines'
 import { tap } from '../platform/haptics'
-import { Screen, Overline, Panel, Rule, Button, Sheet, Field, EmptyState, Data, inputStyle } from '../components/ui'
+import {
+  Screen,
+  Overline,
+  Panel,
+  Rule,
+  Button,
+  Sheet,
+  Field,
+  EmptyState,
+  Data,
+  Segmented,
+  inputStyle
+} from '../components/ui'
 
 const BLANK = {
   name: '',
@@ -167,7 +179,10 @@ function MedRow({ med, today, onClick }) {
   const notStarted = med.startKey && today < med.startKey
 
   return (
-    <button onClick={onClick} style={{ ...S.medRow, opacity: isCourseActive(med, today) ? 1 : 0.5 }}>
+    <button
+      onClick={onClick}
+      style={{ ...S.medRow, opacity: isCourseActive(med, today) ? 1 : 0.5 }}
+    >
       <span style={{ fontSize: 'var(--fs-xl)' }}>{med.icon}</span>
       <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
         <div style={S.doseName}>{med.name}</div>
@@ -254,28 +269,21 @@ function MedSheet({ draft, onClose, onSave, onDelete }) {
       </Field>
 
       <Field label="Repeat">
-        <div style={S.segmented}>
-          {[
+        <Segmented
+          options={[
             { key: 'daily', label: 'Every day' },
             { key: 'weekdays', label: 'Certain days' }
-          ].map((opt) => (
-            <button
-              key={opt.key}
-              aria-pressed={schedule.type === opt.key}
-              onClick={() =>
-                set({
-                  schedule:
-                    opt.key === 'daily'
-                      ? { type: 'daily' }
-                      : { type: 'weekdays', days: schedule.days ?? [1, 3, 5] }
-                })
-              }
-              style={{ ...S.segment, ...(schedule.type === opt.key ? S.selected : null) }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+          ]}
+          value={schedule.type}
+          onChange={(key) =>
+            set({
+              schedule:
+                key === 'daily'
+                  ? { type: 'daily' }
+                  : { type: 'weekdays', days: schedule.days ?? [1, 3, 5] }
+            })
+          }
+        />
 
         {schedule.type === 'weekdays' && (
           <div style={S.dayRow}>
@@ -375,7 +383,8 @@ const S = {
     letterSpacing: '0.12em',
     color: 'var(--textMuted)',
     border: '1px solid var(--border)',
-    padding: '3px 6px',
+    borderRadius: 'var(--radius-pill)',
+    padding: '3px 8px',
     flexShrink: 0
   },
   check: {
@@ -384,6 +393,7 @@ const S = {
     flexShrink: 0,
     background: 'transparent',
     border: '1px solid',
+    borderRadius: 'var(--radius-pill)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -416,31 +426,20 @@ const S = {
     minWidth: 0,
     padding: '10px 4px',
     border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     color: 'var(--textDim)',
     fontSize: 'var(--fs-xs)',
     fontWeight: 700
   },
   timeBtnClock: { fontSize: 'var(--fs-3xs)', opacity: 0.75 },
-  segmented: { display: 'flex', border: '1px solid var(--border)' },
-  segment: {
-    flex: 1,
-    minWidth: 0,
-    padding: '11px 4px',
-    border: 'none',
-    background: 'transparent',
-    color: 'var(--textDim)',
-    fontSize: 'var(--fs-xs)',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em'
-  },
   dayRow: { display: 'flex', gap: 6, marginTop: 10 },
   dayBtn: {
     flex: 1,
     minWidth: 0,
     height: 'var(--touch)',
     border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-pill)',
     background: 'transparent',
     color: 'var(--textDim)',
     fontFamily: 'var(--font-mono)',

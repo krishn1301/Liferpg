@@ -1,4 +1,5 @@
 import { normalizeSchedule } from '../domain/schedule'
+import { HABIT_KINDS } from '../domain/quit'
 import { todayKey } from '../domain/dates'
 import { MAX_HABITS } from '../domain/constants'
 
@@ -42,6 +43,10 @@ export function migrate(raw) {
 
 function normalizeHabit(habit) {
   return {
+    // Every habit written before vows existed is one you build. Defaulting here
+    // is what lets the new field land without touching a single stored record.
+    kind: HABIT_KINDS.build,
+    relapses: {},
     xpBonus: 1,
     archived: false,
     completions: {},
@@ -97,7 +102,11 @@ export function reducer(doc, action) {
         ...doc,
         habits: [
           ...doc.habits,
-          normalizeHabit({ id: newId(), createdKey: action.todayKey ?? todayKey(), ...action.habit })
+          normalizeHabit({
+            id: newId(),
+            createdKey: action.todayKey ?? todayKey(),
+            ...action.habit
+          })
         ]
       }
     }
@@ -146,6 +155,40 @@ export function reducer(doc, action) {
         })
       }
 
+    /**
+     * Break one or more vows on a given day.
+     *
+     * Takes a list of ids because one slip usually breaks more than one thing at
+     * once, and making someone confirm the same bad evening three times over is
+     * a punishment the app has no business handing out.
+     */
+    case 'habit/relapse': {
+      const ids = new Set(action.ids ?? [])
+      const dateKey = action.dateKey ?? todayKey()
+      return {
+        ...doc,
+        habits: doc.habits.map((h) =>
+          ids.has(h.id) ? { ...h, relapses: { ...h.relapses, [dateKey]: true } } : h
+        )
+      }
+    }
+
+    /**
+     * Take a relapse back. A mis-tap that permanently destroys a sixty-day run
+     * with no way to undo it would make the button too frightening to press —
+     * and a relapse nobody dares log is a streak that quietly stops being true.
+     */
+    case 'habit/unrelapse':
+      return {
+        ...doc,
+        habits: doc.habits.map((h) => {
+          if (h.id !== action.id) return h
+          const relapses = { ...h.relapses }
+          delete relapses[action.dateKey]
+          return { ...h, relapses }
+        })
+      }
+
     case 'habits/addMany':
       return {
         ...doc,
@@ -153,7 +196,9 @@ export function reducer(doc, action) {
           ...doc.habits,
           ...action.habits
             .slice(0, Math.max(0, MAX_HABITS - doc.habits.length))
-            .map((h) => normalizeHabit({ id: newId(), createdKey: action.todayKey ?? todayKey(), ...h }))
+            .map((h) =>
+              normalizeHabit({ id: newId(), createdKey: action.todayKey ?? todayKey(), ...h })
+            )
         ]
       }
 

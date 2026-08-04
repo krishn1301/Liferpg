@@ -133,8 +133,9 @@ describe('routine block actions', () => {
 
   it('deletes by id', () => {
     const doc = add(emptyDoc(), { label: 'A', start: '07:00', end: '08:00' })
-    expect(reducer(doc, { type: 'block/delete', id: doc.routineBlocks[0].id }).routineBlocks)
-      .toEqual([])
+    expect(
+      reducer(doc, { type: 'block/delete', id: doc.routineBlocks[0].id }).routineBlocks
+    ).toEqual([])
   })
 })
 

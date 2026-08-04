@@ -1,15 +1,27 @@
 import { activeHabits, bestStreak, dueToday } from './streaks'
+import { isVow, cleanDaysTotal } from './quit'
 
 export const XP_PER_COMPLETION = 10
 
 /** Level n costs n × 100 XP: 100 for level 2, 200 for level 3, and so on. */
 export const levelCost = (level) => level * 100
 
-/** Total XP earned, derived from history rather than stored as a counter. */
-export function totalXp(habits) {
+/**
+ * Total XP earned, derived from history rather than stored as a counter.
+ *
+ * A vow pays the same rate per clean day that a habit pays per completion —
+ * getting through a day without smoking is not worth less than ticking a box.
+ * It is paid on *every* clean day ever banked, not the current run, so breaking
+ * a vow costs you the streak and nothing else. XP that has been earned is never
+ * taken back; a relapse that also knocked you down three levels is the kind of
+ * punishment that gets an app deleted rather than reopened.
+ */
+export function totalXp(habits, todayKey) {
   return habits.reduce((sum, habit) => {
-    const done = Object.values(habit.completions ?? {}).filter(Boolean).length
-    return sum + done * XP_PER_COMPLETION * (habit.xpBonus ?? 1)
+    const days = isVow(habit)
+      ? cleanDaysTotal(habit, todayKey)
+      : Object.values(habit.completions ?? {}).filter(Boolean).length
+    return sum + days * XP_PER_COMPLETION * (habit.xpBonus ?? 1)
   }, 0)
 }
 
@@ -52,8 +64,8 @@ export const BADGES = [
 export function earnedBadges(habits, todayKey) {
   const active = activeHabits(habits)
 
-  const xp = totalXp(active)
-  const best = active.reduce((max, h) => Math.max(max, bestStreak(h)), 0)
+  const xp = totalXp(active, todayKey)
+  const best = active.reduce((max, h) => Math.max(max, bestStreak(h, todayKey)), 0)
   const completions = active.reduce(
     (sum, h) => sum + Object.values(h.completions ?? {}).filter(Boolean).length,
     0

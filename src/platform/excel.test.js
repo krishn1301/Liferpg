@@ -74,6 +74,85 @@ describe('workbook structure', () => {
   })
 })
 
+describe('vows', () => {
+  const vow = (over = {}) =>
+    habit({
+      id: 'v1',
+      name: 'No smoking',
+      icon: '🚭',
+      kind: 'quit',
+      category: 'health',
+      createdKey: MON,
+      relapses: {},
+      ...over
+    })
+
+  it('keeps them out of the daily grid, where a row of blanks would be a lie', async () => {
+    const wb = await buildWorkbook(docWith([habit(), vow()]), SUN)
+    const names = wb
+      .getWorksheet('Daily Habits')
+      .getColumn(2)
+      .values.filter(Boolean)
+      .map((v) => String(v))
+
+    expect(names.some((n) => n.includes('Run'))).toBe(true)
+    expect(names.some((n) => n.includes('No smoking'))).toBe(false)
+  })
+
+  it('does not drag the daily completion % row down', async () => {
+    const wb = await buildWorkbook(docWith([habit({ completions: { [MON]: true } }), vow()]), SUN)
+    const sheet = wb.getWorksheet('Daily Habits')
+    const pct = rowValues(sheet, sheet.rowCount)
+    // Monday: the one build habit was due and done.
+    expect(pct[3]).toBe('100%')
+  })
+
+  it('gets its own block on the stats sheet with clean-day figures', async () => {
+    const wb = await buildWorkbook(
+      docWith([habit(), vow({ relapses: { '2026-06-04': true } })]),
+      SUN
+    )
+    const stats = wb.getWorksheet('Statistics')
+
+    let header = null
+    let row = null
+    stats.eachRow((r, n) => {
+      if (r.getCell('name').value === 'VOWS') header = n
+      if (String(r.getCell('name').value ?? '').includes('No smoking') && !row) row = n
+    })
+
+    expect(header).not.toBeNull()
+    expect(row).toBe(header + 1)
+    // Clean since 1 Jun, asked on the 7th: six whole days, one of them a slip.
+    expect(stats.getRow(row).getCell('total').value).toBe(5)
+    expect(stats.getRow(row).getCell('streak').value).toBe('2 days')
+    expect(stats.getRow(row).getCell('rate').value).toBe('3 days')
+  })
+
+  it('adds clean-day XP to the sheet total', async () => {
+    const wb = await buildWorkbook(docWith([vow()]), SUN)
+    const stats = wb.getWorksheet('Statistics')
+    const total = stats.getRow(stats.rowCount)
+    expect(total.getCell('name').value).toBe('📊 TOTAL')
+    // Six clean days × 10 XP. A relapse resets the streak, never the XP.
+    expect(total.getCell('xp').value).toBe(60)
+  })
+
+  it('records its kind and its slips in Config, and no schedule', async () => {
+    const wb = await buildWorkbook(docWith([vow({ relapses: { '2026-06-04': true } })]), SUN)
+    const row = wb.getWorksheet('Config').getRow(2)
+    expect(row.getCell('kind').value).toBe('quit')
+    expect(row.getCell('schedule').value).toBeFalsy()
+    expect(row.getCell('relapses').value).toBe('2026-06-04')
+  })
+
+  it('omits the vow block entirely when there are none', async () => {
+    const wb = await buildWorkbook(docWith([habit()]), SUN)
+    const names = wb.getWorksheet('Statistics').getColumn('name').values.filter(Boolean)
+    expect(names).not.toContain('VOWS')
+  })
+})
+
 describe('per-habit rate uses that habit own scheduled days', () => {
   it('gives a perfectly-kept Mon/Wed/Fri habit 100%, not 43%', async () => {
     // The desktop bug: totalDone / every date in the sheet. Three of seven days

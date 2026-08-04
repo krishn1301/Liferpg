@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { useStore } from '../state/StoreProvider'
 import { useToday } from '../state/useToday'
 import { addDays, startOfWeek, dayOfWeek } from '../domain/dates'
-import { categoryStats, dailyTrend, habitBreakdown, overview } from '../domain/stats'
+import { categoryStats, dailyTrend, habitBreakdown, overview, vowBreakdown } from '../domain/stats'
 import { earnedBadges } from '../domain/xp'
-import { Screen, Overline, Panel, Rule, EmptyState, Data } from '../components/ui'
+import { Screen, Overline, Panel, Rule, EmptyState, Data, Segmented } from '../components/ui'
 import { Pulsar } from '../components/catalog'
 
 const RANGES = [
@@ -29,6 +29,7 @@ export default function Stats() {
     () => habitBreakdown(doc.habits, from, today, today),
     [doc.habits, from, today]
   )
+  const vows = useMemo(() => vowBreakdown(doc.habits, today), [doc.habits, today])
   const badges = useMemo(() => earnedBadges(doc.habits, today), [doc.habits, today])
 
   // The pulsar plot wants one ridge per week, weekday across. A day with
@@ -44,6 +45,10 @@ export default function Stats() {
     }
     return [...byWeek.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([, v]) => v)
   }, [trend])
+
+  // Vows are outside every rate in this screen — see stats.js. If they are all
+  // there is, the whole completion half of the page has no data to stand on.
+  const measurable = rows.length > 0
 
   if (!stats.tracked) {
     return (
@@ -65,64 +70,108 @@ export default function Stats() {
       {/* A spec sheet, not a grid of tiles. Six numbers in a ruled column are
           read top-to-bottom in one pass; six centred cards make the eye hop. */}
       <Panel flush>
-        <Spec label="Completion" value={`${stats.rate}%`} lead />
-        <Rule />
-        <Spec label="Current streak" value={stats.longestCurrent} />
+        {/* A completion rate needs something with due days behind it. Someone
+            tracking only vows would otherwise read a permanent 0% for a month
+            they never missed a single thing. */}
+        {measurable && (
+          <>
+            <Spec label="Completion" value={`${stats.rate}%`} lead />
+            <Rule />
+          </>
+        )}
+        <Spec label="Current streak" value={stats.longestCurrent} lead={!measurable} />
         <Rule />
         <Spec label="Best ever" value={stats.allTimeBest} />
         <Rule />
         <Spec label="Habits" value={stats.tracked} />
-        <Rule />
-        <Spec label="Completions" value={stats.completions} />
+        {measurable && (
+          <>
+            <Rule />
+            <Spec label="Completions" value={stats.completions} />
+          </>
+        )}
         <Rule />
         <Spec label="Total XP" value={stats.xp} />
       </Panel>
 
-      <Overline>Trend</Overline>
-      <Panel style={{ padding: '18px 14px 12px' }}>
-        <Pulsar weeks={weeks} />
-        <div style={S.axis} aria-hidden="true">
-          {WEEKDAYS.map((d, i) => (
-            <span key={i} style={S.axisTick}>
-              {d}
-            </span>
-          ))}
-        </div>
-        <p style={S.plotNote}>
-          One ridge per week, oldest at the back. Front is this week.
-        </p>
-      </Panel>
+      {measurable && (
+        <>
+          <Overline>Trend</Overline>
+          <Panel style={{ padding: '18px 14px 12px' }}>
+            <Pulsar weeks={weeks} />
+            <div style={S.axis} aria-hidden="true">
+              {WEEKDAYS.map((d, i) => (
+                <span key={i} style={S.axisTick}>
+                  {d}
+                </span>
+              ))}
+            </div>
+            <p style={S.plotNote}>One ridge per week, oldest at the back. Front is this week.</p>
+          </Panel>
 
-      <Overline>By category</Overline>
-      <Panel flush>
-        {cats.map((cat, i) => (
-          <div key={cat.key}>
-            {i > 0 && <Rule />}
-            <Bar
-              label={cat.label}
-              color={cat.color}
-              pct={cat.pct}
-              note={cat.due ? `${cat.done} of ${cat.due}` : 'none due'}
-            />
-          </div>
-        ))}
-      </Panel>
+          <Overline>By category</Overline>
+          <Panel flush>
+            {cats.map((cat, i) => (
+              <div key={cat.key}>
+                {i > 0 && <Rule />}
+                <Bar
+                  label={cat.label}
+                  color={cat.color}
+                  pct={cat.pct}
+                  note={cat.due ? `${cat.done} of ${cat.due}` : 'none due'}
+                />
+              </div>
+            ))}
+          </Panel>
 
-      <Overline>By habit</Overline>
-      <Panel flush>
-        {rows.map((row, i) => (
-          <div key={row.id}>
-            {i > 0 && <Rule />}
-            <Bar
-              label={`${row.icon ?? '⭐'} ${row.name}`}
-              color={row.color}
-              pct={row.pct}
-              note={row.due ? `${row.done} of ${row.due}` : 'none due'}
-              trailing={row.streak > 0 ? `run ${row.streak}` : null}
-            />
-          </div>
-        ))}
-      </Panel>
+          <Overline>By habit</Overline>
+          <Panel flush>
+            {rows.map((row, i) => (
+              <div key={row.id}>
+                {i > 0 && <Rule />}
+                <Bar
+                  label={`${row.icon ?? '⭐'} ${row.name}`}
+                  color={row.color}
+                  pct={row.pct}
+                  note={row.due ? `${row.done} of ${row.due}` : 'none due'}
+                  trailing={row.streak > 0 ? `run ${row.streak}` : null}
+                />
+              </div>
+            ))}
+          </Panel>
+        </>
+      )}
+
+      {vows.length > 0 && (
+        <>
+          <Overline>Vows</Overline>
+          {/* Deliberately outside every aggregate above. A vow has no due days
+              and so no rate to sort by; the question it answers is the opposite
+              of "By habit"'s — not which am I neglecting, but how long have I
+              held. Longest run first. */}
+          <Panel flush>
+            {vows.map((vow, i) => (
+              <div key={vow.id}>
+                {i > 0 && <Rule />}
+                <div style={S.vow}>
+                  <div style={S.vowTop}>
+                    <span style={S.vowName}>
+                      {vow.icon ?? '🚫'} {vow.name}
+                    </span>
+                    <Data style={S.vowStreak}>{vow.streak} d</Data>
+                  </div>
+                  <Data style={S.vowNote}>
+                    Best {vow.best} · {vow.cleanDays} clean days ·{' '}
+                    {vow.relapses === 0
+                      ? 'never broken'
+                      : `${vow.relapses} ${vow.relapses === 1 ? 'relapse' : 'relapses'}`}
+                  </Data>
+                </div>
+              </div>
+            ))}
+          </Panel>
+        </>
+      )}
 
       <Overline>Badges</Overline>
       <Panel flush>
@@ -154,18 +203,11 @@ export default function Stats() {
 
 function RangePicker({ value, onChange }) {
   return (
-    <div style={S.segmented}>
-      {RANGES.map((range) => (
-        <button
-          key={range.days}
-          onClick={() => onChange(range.days)}
-          aria-pressed={value === range.days}
-          style={{ ...S.segment, ...(value === range.days ? S.selected : null) }}
-        >
-          {range.label}
-        </button>
-      ))}
-    </div>
+    <Segmented
+      options={RANGES.map((r) => ({ key: r.days, label: r.label }))}
+      value={value}
+      onChange={onChange}
+    />
   )
 }
 
@@ -197,19 +239,29 @@ function Bar({ label, color, pct, note, trailing }) {
 }
 
 const S = {
-  segmented: { display: 'flex', border: '1px solid var(--border)' },
-  segment: {
-    minWidth: 0,
-    padding: '8px 11px',
-    fontFamily: 'var(--font-mono)',
-    fontSize: 'var(--fs-2xs)',
-    fontWeight: 600,
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-    background: 'transparent',
-    color: 'var(--textDim)'
+  vow: { padding: '12px 16px' },
+  vowTop: {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12
   },
-  selected: { background: 'var(--text)', color: 'var(--onInk)' },
+  vowName: {
+    fontSize: 'var(--fs-base)',
+    fontWeight: 600,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  },
+  vowStreak: { fontSize: 'var(--fs-base)', fontWeight: 700, flexShrink: 0 },
+  vowNote: {
+    display: 'block',
+    marginTop: 6,
+    fontSize: 'var(--fs-2xs)',
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    color: 'var(--textMuted)'
+  },
   spec: {
     display: 'flex',
     alignItems: 'baseline',

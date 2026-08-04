@@ -1,5 +1,6 @@
 import { addDays, startOfWeek, weekKeys } from './dates'
 import { isDueOn, normalizeSchedule, SCHEDULE_TYPES, completionsThisWeek } from './schedule'
+import { isVow, cleanStreak, bestCleanStreak } from './quit'
 
 // Streaks are the number one reason people quit a habit tracker: one missed
 // day wipes out months of work and the app stops feeling worth opening. Three
@@ -25,6 +26,12 @@ const MAX_LOOKBACK_DAYS = 3650 // 10 years — a hard stop, never reached in pra
  * they never happened.
  */
 export function currentStreak(habit, todayKey) {
+  // A vow's streak is days since it was last broken. It comes out of the
+  // relapse history rather than the completion history, but callers get the
+  // same shape back so the Today rows, badges and Stats tiles need no special
+  // case — see domain/quit.js.
+  if (isVow(habit)) return { streak: cleanStreak(habit, todayKey), frozenDays: [] }
+
   const schedule = normalizeSchedule(habit?.schedule)
   if (schedule.type === SCHEDULE_TYPES.weekly) {
     return weeklyStreak(habit, todayKey, schedule.timesPerWeek)
@@ -91,8 +98,18 @@ function weeklyStreak(habit, todayKey, timesPerWeek) {
   return { streak, frozenDays: [] }
 }
 
-/** The longest streak this habit has ever reached, for the stats screen. */
-export function bestStreak(habit) {
+/**
+ * The longest streak this habit has ever reached, for the stats screen.
+ *
+ * `todayKey` only matters for vows, whose best run may be the one still going.
+ * It stays optional so the many call sites that pass a habit alone keep working.
+ */
+export function bestStreak(habit, todayKey) {
+  // Routing vows through here rather than giving them their own path is what
+  // makes the streak badges work for free: earnedBadges keys off bestStreak, so
+  // a 30-day clean run unlocks Diamond Habit with no extra code.
+  if (isVow(habit)) return bestCleanStreak(habit, todayKey)
+
   const keys = Object.keys(habit?.completions ?? {})
     .filter((k) => habit.completions[k])
     .sort()

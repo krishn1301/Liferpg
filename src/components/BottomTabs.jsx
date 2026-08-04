@@ -40,39 +40,48 @@ export const TABS = [
 
 export default function BottomTabs() {
   return (
-    <nav style={S.bar}>
-      {TABS.map((tab, i) => (
-        <NavLink key={tab.to} to={tab.to} end={tab.end} style={S.link}>
-          {({ isActive }) => (
-            <span
-              style={{
-                ...S.item,
-                ...(i > 0 ? S.divided : null),
-                ...(isActive ? S.itemActive : null)
-              }}
-            >
-              <Mark {...MARKS[tab.mark]} />
-              <span style={S.label}>{tab.label}</span>
-            </span>
-          )}
-        </NavLink>
-      ))}
-    </nav>
+    <div style={S.dock}>
+      <nav style={S.bar}>
+        {TABS.map((tab) => (
+          <NavLink key={tab.to} to={tab.to} end={tab.end} style={S.link}>
+            {({ isActive }) => (
+              <span style={{ ...S.item, ...(isActive ? S.itemActive : null) }}>
+                <Mark {...MARKS[tab.mark]} />
+                <span style={S.label}>{tab.label}</span>
+              </span>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+    </div>
   )
 }
 
 const S = {
-  bar: {
+  // The dock is a transparent gutter, not a bar. `pointerEvents: none` is what
+  // keeps it from eating taps in the strip of content visible either side of
+  // the floating bar — without it there is an invisible dead band across the
+  // bottom of every screen.
+  dock: {
     position: 'fixed',
     left: 0,
     right: 0,
     bottom: 0,
     zIndex: 30,
+    padding: `0 12px calc(var(--safe-bottom) + 10px)`,
+    pointerEvents: 'none'
+  },
+  bar: {
+    pointerEvents: 'auto',
     display: 'grid',
     gridTemplateColumns: `repeat(${TABS.length}, 1fr)`,
-    background: 'var(--bg)',
-    borderTop: '1px solid var(--border)',
-    paddingBottom: 'var(--safe-bottom)'
+    gap: 4,
+    padding: 4,
+    maxWidth: 480,
+    margin: '0 auto',
+    background: 'var(--panel)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-pill)'
   },
   link: { textDecoration: 'none' },
   item: {
@@ -82,10 +91,9 @@ const S = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    borderRadius: 'var(--radius-pill)',
     color: 'var(--textMuted)'
   },
-  // Cells in a ruled row, the way the board divides its nav.
-  divided: { borderLeft: '1px solid var(--rule)' },
   // The selected cell inverts. Same mechanism as a finished habit and a primary
   // button: in this world "committed" always means PULSE ground, VOID ink.
   itemActive: { background: 'var(--text)', color: 'var(--onInk)' },

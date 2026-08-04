@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { stripDays } from './catalog'
+import { stripDays, vowStripDays } from './catalog'
 
 // The code strip is the app's main visual claim about a habit's recent past.
 // Getting its three states wrong is not a cosmetic bug: a hollow block reads
@@ -61,5 +61,40 @@ describe('stripDays', () => {
 
     expect(states).not.toContain('missed')
     expect(states.filter((s) => s === 'done')).toHaveLength(2)
+  })
+})
+
+describe('vowStripDays', () => {
+  const vow = (over = {}) => ({ kind: 'quit', createdKey: '2026-07-01', relapses: {}, ...over })
+
+  it('is an unbroken run when the vow has been kept', () => {
+    // Nothing to confirm and nothing to miss: every day you did not slip is a
+    // day you held it. A hollow block here would be an accusation.
+    const strip = vowStripDays(vow(), TODAY)
+    expect(strip.map((d) => d.state)).toEqual(Array(7).fill('done'))
+    expect(strip.some((d) => d.color)).toBe(false)
+  })
+
+  it('presses the relapse day in danger, not as a gap', () => {
+    const strip = vowStripDays(vow({ relapses: { '2026-07-28': true } }), TODAY)
+    const slip = strip.find((d) => d.key === '2026-07-28')
+
+    expect(slip).toEqual({ key: '2026-07-28', state: 'done', color: 'var(--danger)' })
+    // The run either side is unbroken — the strip shows where it broke, not a
+    // hole where the day used to be.
+    expect(strip.filter((d) => d.state === 'done')).toHaveLength(7)
+  })
+
+  it('leaves the days before the vow existed alone', () => {
+    const strip = vowStripDays(vow({ createdKey: '2026-07-28' }), TODAY)
+    expect(strip.map((d) => d.state)).toEqual([
+      'off', // Fri 24
+      'off', // Sat 25
+      'off', // Sun 26
+      'off', // Mon 27
+      'done', // Tue 28 — clean since
+      'done', // Wed 29
+      'done' // Thu 30
+    ])
   })
 })

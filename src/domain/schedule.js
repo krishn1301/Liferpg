@@ -1,4 +1,5 @@
 import { dayOfWeek, weekKeys } from './dates'
+import { isVow } from './quit'
 
 // A habit is only judged on the days it is actually meant to happen.
 //
@@ -63,6 +64,16 @@ export function existedOn(habit, dateKey) {
  */
 export function isDueOn(habit, dateKey) {
   if (!existedOn(habit, dateKey)) return false
+
+  // A vow is never "due". There is nothing to complete — you keep it by not
+  // acting — so it must stay out of every denominator in the app.
+  //
+  // This one line is load-bearing. Without it a vow reads as due every day and
+  // completed on none: a permanent 0% that drags down each category rate,
+  // flattens the trend plot, parks itself at the top of the worst-first list,
+  // and makes Perfect Day unwinnable for as long as the vow exists. Its own
+  // numbers come from domain/quit.js instead.
+  if (isVow(habit)) return false
 
   const schedule = normalizeSchedule(habit?.schedule)
   switch (schedule.type) {

@@ -46,8 +46,7 @@ describe('earnedBadges', () => {
       { completions: { [MON]: true }, schedule: { type: 'daily' } },
       { completions: {}, schedule: { type: 'daily' } }
     ]
-    const badge = (habits) =>
-      earnedBadges(habits, MON).find((b) => b.id === 'perfect-day').earned
+    const badge = (habits) => earnedBadges(habits, MON).find((b) => b.id === 'perfect-day').earned
 
     expect(badge(partial)).toBe(false)
     expect(badge([partial[0]])).toBe(true)

@@ -45,7 +45,24 @@ async function render(hash = '') {
   return { container, unmount: () => act(() => root.unmount()) }
 }
 
-const click = async (el) => act(async () => el.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+const click = async (el) =>
+  act(async () => el.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+
+/**
+ * Wait for the UI to say something.
+ *
+ * The file-import flow goes through `FileReader`, which resolves on its own
+ * schedule. Waiting a single macrotask for it passed nearly always and failed
+ * roughly once in two hundred runs — a flake that cost more to chase than it
+ * ever did to fix. Poll instead, and let the timeout be the failure.
+ */
+async function waitForText(container, text, tries = 50) {
+  for (let i = 0; i < tries; i++) {
+    if (container.textContent.includes(text)) return
+    await act(async () => new Promise((r) => setTimeout(r, 10)))
+  }
+  throw new Error(`Timed out waiting for ${JSON.stringify(text)}`)
+}
 
 /** Put a File on a file input. jsdom has no DataTransfer to build a FileList with. */
 const setFiles = (input, file) =>
@@ -79,8 +96,12 @@ describe('App', () => {
     const first = await render()
 
     // Navigate to Habits and create one through the real UI
-    await click([...first.container.querySelectorAll('a')].find((a) => a.textContent.includes('Habits')))
-    await click([...first.container.querySelectorAll('button')].find((b) => b.textContent.includes('Add')))
+    await click(
+      [...first.container.querySelectorAll('a')].find((a) => a.textContent.includes('Habits'))
+    )
+    await click(
+      [...first.container.querySelectorAll('button')].find((b) => b.textContent.includes('Add'))
+    )
 
     const nameInput = first.container.querySelector('input')
     await act(async () => {
@@ -165,7 +186,14 @@ describe('reward moments', () => {
       'liferpg.doc.v1',
       JSON.stringify({
         habits: [
-          { id: 1, name: 'Tuition', icon: '📚', category: 'education', schedule: { type: 'daily' }, completions }
+          {
+            id: 1,
+            name: 'Tuition',
+            icon: '📚',
+            category: 'education',
+            schedule: { type: 'daily' },
+            completions
+          }
         ],
         medicines: [],
         routineBlocks: [],
@@ -205,6 +233,134 @@ describe('reward moments', () => {
   })
 })
 
+// Vows are the one habit shape with no checkbox, so nothing in the flow above
+// exercises them. The relapse button is also the only destructive control on
+// Today, and the only one that can quietly destroy a two-month run.
+describe('vows and the relapse flow', () => {
+  beforeEach(() => store.clear())
+
+  /** A vow clean since `days` ago, plus a build habit so Stats has a rate. */
+  const seedVow = (days, relapses = {}) => {
+    const d = new Date()
+    d.setDate(d.getDate() - days)
+    const clean = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+    store.set(
+      'liferpg.doc.v1',
+      JSON.stringify({
+        habits: [
+          {
+            id: 'v1',
+            name: 'No smoking',
+            icon: '🚭',
+            category: 'health',
+            kind: 'quit',
+            createdKey: clean,
+            relapses,
+            completions: {}
+          }
+        ],
+        medicines: [],
+        routineBlocks: [],
+        dailyLogs: {},
+        settings: { theme: 'dark' }
+      })
+    )
+    return clean
+  }
+
+  it('shows the run on Today, with no checkbox to tick', async () => {
+    seedVow(14)
+    const { container, unmount } = await render()
+
+    expect(container.textContent).toContain('Vows')
+    expect(container.textContent).toContain('No smoking')
+    expect(container.textContent).toContain('14 days clean')
+    // Fourteen clean days at the same rate a completion pays.
+    expect(container.textContent).toContain('140 XP')
+
+    const tick = [...container.querySelectorAll('button')].find((b) =>
+      b.getAttribute('aria-label')?.includes('No smoking done')
+    )
+    expect(tick).toBeUndefined()
+
+    // And it must not appear in the quest list, where it would sit unticked
+    // forever and make Perfect Day unwinnable.
+    expect(container.textContent).toContain('Nothing scheduled today')
+    unmount()
+  })
+
+  it('resets the streak on a relapse and keeps the XP', async () => {
+    seedVow(14)
+    const { container, unmount } = await render()
+
+    await click([...container.querySelectorAll('button')].find((b) => b.textContent === 'Relapse'))
+    expect(container.textContent).toContain('Record a relapse')
+
+    // Nothing is pre-selected: the button must not be armed on open.
+    const confirm = () =>
+      [...container.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Reset '))
+    expect(confirm().disabled).toBe(true)
+
+    await click(
+      [...container.querySelectorAll('button')].find((b) => b.textContent?.includes('No smoking'))
+    )
+    expect(confirm().textContent).toBe('Reset 1 streak')
+    await click(confirm())
+
+    expect(container.textContent).toContain('0 days clean')
+    // The XP the previous fourteen days earned is untouched — losing levels
+    // over one bad night is how people delete a habit tracker.
+    expect(container.textContent).toContain('140 XP')
+    unmount()
+  })
+
+  it('gives a vow its own section in Stats rather than a permanent 0%', async () => {
+    seedVow(40, {})
+    const { container, unmount } = await render('#/stats')
+
+    expect(container.textContent).toContain('Vows')
+    expect(container.textContent).toContain('40 d')
+    expect(container.textContent).toContain('never broken')
+    // No completion rate at all: there is nothing measurable to divide by.
+    expect(container.textContent).not.toContain('Completion')
+    expect(container.textContent).not.toContain('0%')
+    unmount()
+  })
+
+  it('survives a restart with the slip still recorded', async () => {
+    const clean = seedVow(30)
+    const first = await render()
+
+    await click(
+      [...first.container.querySelectorAll('button')].find((b) => b.textContent === 'Relapse')
+    )
+    await click(
+      [...first.container.querySelectorAll('button')].find((b) =>
+        b.textContent?.includes('No smoking')
+      )
+    )
+    await click(
+      [...first.container.querySelectorAll('button')].find((b) =>
+        b.textContent?.startsWith('Reset ')
+      )
+    )
+    first.unmount()
+
+    const second = await render('#/habits')
+    expect(second.container.textContent).toContain('0 days clean')
+    // The clean-since date is untouched by a relapse; only the run restarts.
+    await click(
+      [...second.container.querySelectorAll('button')].find((b) =>
+        b.textContent.includes('No smoking')
+      )
+    )
+    expect(second.container.querySelector('input[type="date"]').value).toBe(clean)
+    expect(second.container.textContent).toContain('Relapses (1)')
+    second.unmount()
+  })
+})
+
 describe('importing a desktop save through the real UI', () => {
   beforeEach(() => store.clear())
 
@@ -235,9 +391,8 @@ describe('importing a desktop save through the real UI', () => {
       // jsdom has no DataTransfer, and the handler only ever reads files[0].
       setFiles(input, file)
       input.dispatchEvent(new Event('change', { bubbles: true }))
-      // Let FileReader's async callback land before assertions.
-      await new Promise((r) => setTimeout(r, 0))
     })
+    await waitForText(container, 'Import from desktop')
 
     // The sheet must name both numbers before anything is replaced: two live
     // completions earn 20 XP, while the file claims 190.
@@ -266,8 +421,8 @@ describe('importing a desktop save through the real UI', () => {
     await act(async () => {
       setFiles(input, new File(['not json'], 'junk.json', { type: 'application/json' }))
       input.dispatchEvent(new Event('change', { bubbles: true }))
-      await new Promise((r) => setTimeout(r, 0))
     })
+    await waitForText(container, "isn't valid JSON")
 
     expect(container.textContent).toContain("isn't valid JSON")
     expect(container.textContent).not.toContain('Replace my data')

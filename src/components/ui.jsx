@@ -2,11 +2,12 @@
 //
 // Two rules drive nearly everything here:
 //
-//   1. There is no elevation. A `Panel` is a 1px ruled cell on the page's own
-//      black, not a lighter tile floating above it. Nothing has a shadow and
-//      nothing has a radius. (This is why there is no `Card` any more: naming
-//      the container after the thing the world rejects kept re-teaching the
-//      wrong habit.)
+//   1. Containers round, data stays geometric. A `Panel` is a soft filled cell
+//      with a hairline edge; the marks *inside* it — code strips, calendar
+//      cells, badge blocks — stay square, because a rounded block stops reading
+//      as a printed cell and starts reading as a dot. (There is still no
+//      `Card`: the container is named after the ruled panel it descends from,
+//      not after the generic tile every other app ships.)
 //   2. Emphasis is inversion. The committed state — a primary button, a
 //      finished habit, the selected tab — fills with PULSE and sets its text in
 //      VOID. There is no third accent doing the job of contrast.
@@ -43,7 +44,11 @@ export function Overline({ children, style }) {
   return <h2 style={{ ...S.overline, ...style }}>{children}</h2>
 }
 
-/** A ruled cell. `flush` drops the padding for content that rules itself. */
+/**
+ * A soft filled cell. `flush` drops the padding for content that rules itself
+ * — and because the fill is now real, flush children must clip to the corners,
+ * which is what `overflow: hidden` on the panel is for.
+ */
 export function Panel({ children, style, flush = false }) {
   return <div style={{ ...S.panel, ...(flush ? { padding: 0 } : null), ...style }}>{children}</div>
 }
@@ -132,6 +137,35 @@ export function Sheet({ open, title, onClose, footer, children }) {
   )
 }
 
+/**
+ * Segmented control — a pill track with a pill-shaped selected segment.
+ *
+ * Stats, Habits, Medicines and Settings each carried their own copy of this,
+ * which is how four supposedly identical controls ended up with three
+ * different paddings. `options` is `[{ key, label }]`; `onChange` is handed the
+ * key, so callers that need to build a whole object from it still can.
+ */
+export function Segmented({ options, value, onChange, style }) {
+  return (
+    <div style={{ ...S.segmented, ...style }}>
+      {options.map((opt) => {
+        const selected = value === opt.key
+        return (
+          <button
+            key={opt.key}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onChange(opt.key)}
+            style={{ ...S.segment, ...(selected ? S.segmentOn : null) }}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export function Field({ label, children }) {
   return (
     <label style={S.field}>
@@ -150,12 +184,17 @@ export const inputStyle = {
   width: '100%',
   minHeight: 'var(--touch)',
   outline: 'none',
-  borderRadius: 0
+  // Not a pill: a pill-shaped text field pushes its caret away from the edge
+  // and reads as a search box. Fields are containers, so they take the small
+  // container radius.
+  borderRadius: 'var(--radius-sm)'
 }
 
 const S = {
   screen: {
-    padding: `calc(var(--safe-top) + 20px) 18px calc(var(--tab-height) + var(--safe-bottom) + 28px)`,
+    // The trailing 40px clears the floating tab bar's own padding, border and
+    // dock gutter — the bar is taller than `--tab-height` by design.
+    padding: `calc(var(--safe-top) + 20px) 18px calc(var(--tab-height) + var(--safe-bottom) + 40px)`,
     maxWidth: 720,
     margin: '0 auto'
   },
@@ -198,18 +237,22 @@ const S = {
     margin: '28px 0 10px'
   },
   panel: {
-    background: 'transparent',
+    background: 'var(--panel)',
     border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    // Flush panels put full-bleed rows and strips against the edge; without
+    // this they square off the corners the panel just paid for.
+    overflow: 'hidden',
     padding: 16
   },
   ruleLine: { height: 1, background: 'var(--rule)' },
   button: {
-    padding: '12px 18px',
+    padding: '12px 20px',
     fontSize: 'var(--fs-sm)',
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
-    borderRadius: 0,
+    borderRadius: 'var(--radius-pill)',
     whiteSpace: 'nowrap'
   },
   buttonVariants: {
@@ -230,9 +273,33 @@ const S = {
     letterSpacing: '0.1em',
     color: 'var(--textMuted)',
     border: '1px solid var(--rule)',
-    padding: '2px 4px',
+    borderRadius: 'var(--radius-pill)',
+    padding: '2px 6px',
     lineHeight: 1
   },
+  segmented: {
+    display: 'flex',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-pill)',
+    padding: 3,
+    gap: 3
+  },
+  segment: {
+    flex: 1,
+    minWidth: 0,
+    padding: '8px 10px',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    fontWeight: 600,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    background: 'transparent',
+    color: 'var(--textDim)',
+    borderRadius: 'var(--radius-pill)'
+    // No minHeight override: each segment is a tap target in its own right and
+    // keeps the global 48dp floor, which makes the track 56px tall.
+  },
+  segmentOn: { background: 'var(--text)', color: 'var(--onInk)' },
   empty: { textAlign: 'center', padding: '52px 16px' },
   emptyBlocks: { display: 'flex', gap: 4, justifyContent: 'center', marginBottom: 22 },
   emptyBlock: {
@@ -270,7 +337,11 @@ const S = {
     bottom: 0,
     zIndex: 41,
     background: 'var(--panel)',
-    borderTop: '1px solid var(--text)',
+    borderTop: '1px solid var(--border)',
+    // Top corners only. A sheet rounded at the bottom would float above the
+    // screen edge with a sliver of scrim under it, which is not what it is —
+    // it is anchored to the bottom of the device.
+    borderRadius: 'var(--radius) var(--radius) 0 0',
     maxHeight: '85vh',
     overflowY: 'auto',
     paddingBottom: 'var(--safe-bottom)'
@@ -280,10 +351,11 @@ const S = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '12px 16px',
-    borderBottom: '1px solid var(--border)',
+    borderBottom: '1px solid var(--rule)',
     position: 'sticky',
     top: 0,
-    background: 'var(--panel)'
+    background: 'var(--panel)',
+    borderRadius: 'var(--radius) var(--radius) 0 0'
   },
   sheetTitle: {
     fontFamily: 'var(--font-mono)',
@@ -299,7 +371,7 @@ const S = {
     position: 'sticky',
     bottom: 0,
     background: 'var(--panel)',
-    borderTop: '1px solid var(--border)',
+    borderTop: '1px solid var(--rule)',
     padding: '12px 16px',
     display: 'flex',
     gap: 8

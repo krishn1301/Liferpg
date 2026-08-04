@@ -1,27 +1,28 @@
 ---
 name: LifeRPG
-description: A habit tracker built as a record catalogue. Void-black ground, hairline rules instead of cards, engraved condensed caps against monospace data, and a colour-code strip that encodes a week at a glance. Completion is an inversion, not a tick. Phone-first — every rule assumes a thumb, a 411px viewport and no mouse.
+description: A habit tracker built as a record catalogue, softened. Void-black ground, engraved condensed caps against monospace data, and a colour-code strip that encodes a week at a glance. Containers are rounded and filled; the data marks inside them stay square. Completion is an inversion, not a tick. Phone-first — every rule assumes a thumb, a 411px viewport and no mouse.
 
 # The source of truth for colour, type and radius is src/theme/global.css.
 # This frontmatter is the portable export the detector reads. If a token
 # changes there, change it here in the same commit.
 colors:
   # ---- Dark: the canonical ground. ------------------------------------
-  # There is no elevation in this world. Panels are the same black as the
-  # ground; separation is a 1px rule. `panel` exists only so a sheet can
-  # sit above the scrim and still read as a surface.
+  # `panel` is a real surface. Corners without a fill read as a floating
+  # wire rather than a card, so the two arrived together — see "Containers
+  # round" below. Every ratio here is measured against `panel`, the
+  # lightest ground any text sits on.
   bg: '#0a0a0b' # VOID
   surface: '#0a0a0b'
   card: '#0a0a0b'
-  panel: '#121214'
-  input: '#121214'
-  border: '#2b2c2e' # hairline, structural
-  rule: '#1b1c1e' # hairline, decorative — separators inside a group
-  text: '#f2f1ec' # PULSE — warm off-white, 16.5:1
-  text-dim: '#adb1b4' # 8.7:1
-  text-muted: '#7c8083' # 4.7:1
+  panel: '#1a1a1d'
+  input: '#1a1a1d'
+  border: '#35363a' # hairline, structural
+  rule: '#26272a' # hairline, decorative — separators inside a group
+  text: '#f2f1ec' # PULSE — warm off-white, 15.4:1
+  text-dim: '#adb1b4' # 8.0:1
+  text-muted: '#86898c' # 4.9:1 — lifted with the panel; 4.5 is the floor
   accent: '#e9b417' # ENERGY — the signal colour: what is live, next, or earned
-  danger: '#f0574c'
+  danger: '#f0574c' # 5.1:1
   warn: '#e9b417'
   on-accent: '#0a0a0b'
   on-ink: '#0a0a0b' # text drawn on an inverted (PULSE-filled) row
@@ -30,13 +31,13 @@ colors:
   light-bg: '#eeece4'
   light-surface: '#eeece4'
   light-card: '#eeece4'
-  light-panel: '#f7f6f1'
-  light-input: '#f7f6f1'
+  light-panel: '#ffffff' # paper stock on a paper ground
+  light-input: '#ffffff'
   light-border: '#c9c6ba'
   light-rule: '#dedbd0'
-  light-text: '#0a0a0b' # 18.3:1
-  light-text-dim: '#4a4d4f' # 7.9:1
-  light-text-muted: '#63676a' # 5.3:1
+  light-text: '#0a0a0b' # 19.8:1
+  light-text-dim: '#4a4d4f' # 8.6:1
+  light-text-muted: '#63676a' # 5.7:1
   light-accent: '#7d5500' # ENERGY translated: yellow on paper is unreadable
   light-danger: '#b0201c'
   light-warn: '#7d5500'
@@ -98,8 +99,12 @@ typography:
     textTransform: 'uppercase'
 
 rounded:
-  # One value. A radius anywhere is a different product.
-  none: '0'
+  # Containers only. Data marks — the code strip, the year strip, calendar
+  # cells, badge blocks, the tick scale — take none of these and never will.
+  none: '0' # every mark in the notation
+  sm: '10px' # inputs, nested cells, icon buttons
+  md: '16px' # panels, rows, sheets (top corners), the tab bar
+  pill: '999px' # buttons, chips, segmented controls, checkboxes, day pickers
 
 spacing:
   xs: '6px'
@@ -173,11 +178,28 @@ tracked-out mono capitals. The world would happily set everything as a code;
 this app is read at 7am by someone half awake, and a name has to be legible
 before it is stylish. That is the one place the world yields, deliberately.
 
-**No cards. Rules.** Panels do not have their own background — separation is a
-1px `--border` line, or a `--rule` hairline within a group. Nested boxes are
-wrong here in a way they are merely lazy elsewhere: a catalogue page is a grid
-of ruled cells, not a stack of floating tiles. There are no shadows in this
-design, because there is no elevation to describe.
+**Containers round; data stays geometric.** This is the load-bearing rule of
+the softened world, and it is what stops "rounded" turning into "generic".
+
+- *Furniture* — panels, rows, sheets, inputs, buttons, chips, the tab bar —
+  takes `--radius` (16px), `--radius-sm` (10px) or `--radius-pill`.
+- *Marks in the notation* — the code strip, the year strip, calendar cells,
+  badge blocks, the tick scale, the pulsar plot, empty-state blocks — take
+  **no radius at all**. A rounded block stops reading as a printed cell and
+  starts reading as a dot, and the code strip's whole claim is that it is a
+  printed record you can learn to read.
+
+**Rounded outlines need a fill.** A 16px hairline rectangle on the page's own
+black reads as a floating wire, not a card, so `--panel` became a real surface
+in the same change. That retires the earlier "no elevation, separation is a
+1px line" doctrine — it is the honest cost of corners, not an oversight. There
+are still no shadows: the lift is one step of ground colour plus the hairline,
+nothing more. Nested filled boxes are still wrong; a panel holds records, not
+more panels.
+
+The tab bar floats: a pill of `--panel` in a transparent dock, with the active
+cell a pill of PULSE. The dock is `pointer-events: none` so the strip of
+content either side of it is not a dead band.
 
 **48dp is the floor for anything tappable.** Enforced globally in `global.css`
 via `--touch`. The one deliberate exception is the seven-across day picker in

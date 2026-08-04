@@ -3,7 +3,8 @@ import { useStore } from '../state/StoreProvider'
 import { useToday } from '../state/useToday'
 import { addMonths, fromDateKey, leadingBlanks, monthKeys } from '../domain/dates'
 import { dailyTrend } from '../domain/stats'
-import { dueToday } from '../domain/streaks'
+import { activeHabits, dueToday } from '../domain/streaks'
+import { isVow } from '../domain/quit'
 import { categoryOf } from '../domain/constants'
 import { describeSchedule } from '../domain/schedule'
 import { tap } from '../platform/haptics'
@@ -29,6 +30,21 @@ export default function Calendar() {
     const trend = dailyTrend(doc.habits, keys[0], keys[keys.length - 1])
     return new Map(trend.map((d) => [d.dateKey, d]))
   }, [doc.habits, keys])
+
+  // Which vows were broken on each day of this month. A relapse is the one
+  // thing on this screen that is not a completion, so it cannot ride on the
+  // trend data above and gets its own pass.
+  const slips = useMemo(() => {
+    const map = new Map()
+    for (const vow of activeHabits(doc.habits).filter(isVow)) {
+      for (const [key, on] of Object.entries(vow.relapses ?? {})) {
+        if (!on) continue
+        if (!map.has(key)) map.set(key, [])
+        map.get(key).push(vow.name)
+      }
+    }
+    return map
+  }, [doc.habits])
 
   const monthLabel = fromDateKey(keys[0]).toLocaleDateString(undefined, {
     month: 'long',
@@ -73,6 +89,7 @@ export default function Calendar() {
                 key={key}
                 dateKey={key}
                 day={byKey.get(key)}
+                slips={slips.get(key)}
                 isToday={key === today}
                 isFuture={key > today}
                 onClick={() => setSelected(key)}
@@ -88,6 +105,7 @@ export default function Calendar() {
         <DaySheet
           dateKey={selected}
           habits={dueToday(doc.habits, selected)}
+          slips={slips.get(selected)}
           isFuture={selected > today}
           onToggle={(habit) => {
             tap(habit.completions?.[selected] ? 'light' : 'medium')
@@ -107,7 +125,7 @@ export default function Calendar() {
  * empty, part-pressed, pressed — and the *degree* is carried by a bar along
  * the bottom edge, which nothing has to be read on top of.
  */
-function DayCell({ dateKey, day, isToday, isFuture, onClick }) {
+function DayCell({ dateKey, day, slips, isToday, isFuture, onClick }) {
   const due = day?.due ?? 0
   const pct = isFuture ? 0 : (day?.pct ?? 0)
   const full = pct >= 100
@@ -116,7 +134,10 @@ function DayCell({ dateKey, day, isToday, isFuture, onClick }) {
   return (
     <button
       onClick={onClick}
-      aria-label={`${dateKey}, ${day?.done ?? 0} of ${due} done`}
+      aria-label={
+        `${dateKey}, ${day?.done ?? 0} of ${due} done` +
+        (slips ? `, broke ${slips.join(' and ')}` : '')
+      }
       style={{
         ...S.cell,
         background: full ? 'var(--text)' : 'transparent',
@@ -134,20 +155,22 @@ function DayCell({ dateKey, day, isToday, isFuture, onClick }) {
         {Number(dateKey.slice(8))}
       </span>
       {part && (
-        <span
-          style={{ ...S.cellBar, transform: `scaleX(${pct / 100})` }}
-          aria-hidden="true"
-        />
+        <span style={{ ...S.cellBar, transform: `scaleX(${pct / 100})` }} aria-hidden="true" />
       )}
+      {/* A corner wedge, not a tinted cell. The fill is already carrying the
+          completion rate, and a day can be both fully done and a day you broke
+          a vow — the two facts have to be able to sit in the same square. */}
+      {slips && <span style={S.cellSlip} aria-hidden="true" />}
     </button>
   )
 }
 
 function Legend() {
   const items = [
-    { label: 'None', fill: 'transparent', bar: false },
+    { label: 'None', fill: 'transparent' },
     { label: 'Part', fill: 'transparent', bar: true },
-    { label: 'All', fill: 'var(--text)', bar: false }
+    { label: 'All', fill: 'var(--text)' },
+    { label: 'Slip', fill: 'transparent', slip: true }
   ]
   return (
     <div style={S.legend}>
@@ -155,6 +178,7 @@ function Legend() {
         <span key={item.label} style={S.legendItem}>
           <span style={{ ...S.legendSwatch, background: item.fill }}>
             {item.bar && <span style={S.legendBar} />}
+            {item.slip && <span style={S.cellSlip} />}
           </span>
           <Data style={S.legendLabel}>{item.label}</Data>
         </span>
@@ -163,7 +187,7 @@ function Legend() {
   )
 }
 
-function DaySheet({ dateKey, habits, isFuture, onToggle, onClose }) {
+function DaySheet({ dateKey, habits, slips, isFuture, onToggle, onClose }) {
   const label = fromDateKey(dateKey).toLocaleDateString(undefined, {
     weekday: 'long',
     day: 'numeric',
@@ -181,6 +205,12 @@ function DaySheet({ dateKey, habits, isFuture, onToggle, onClose }) {
         </Button>
       }
     >
+      {slips && (
+        <p style={S.slipNote}>
+          Broke {slips.join(', ')} on this day. Undo it from the vow in Habits.
+        </p>
+      )}
+
       {habits.length === 0 ? (
         <p style={S.sheetNote}>Nothing was scheduled on this day.</p>
       ) : isFuture ? (
@@ -195,7 +225,12 @@ function DaySheet({ dateKey, habits, isFuture, onToggle, onClose }) {
       ) : (
         <div style={S.sheetList}>
           {habits.map((habit) => (
-            <DayRow key={habit.id} habit={habit} dateKey={dateKey} onToggle={() => onToggle(habit)} />
+            <DayRow
+              key={habit.id}
+              habit={habit}
+              dateKey={dateKey}
+              onToggle={() => onToggle(habit)}
+            />
           ))}
         </div>
       )}
@@ -259,6 +294,19 @@ const S = {
     minWidth: 0,
     minHeight: 0
   },
+  // A triangle in the top-right corner. Cut with clip-path rather than the
+  // classic transparent-border trick: that spells a 7px coloured side border,
+  // which is both indistinguishable from the card stripe this design threw out
+  // and the thing the detector flags on sight. Square, like every mark here.
+  cellSlip: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 8,
+    height: 8,
+    background: 'var(--danger)',
+    clipPath: 'polygon(0 0, 100% 0, 100% 100%)'
+  },
   // A fixed, safe tint for part-done days — never a continuous ramp.
   cellPart: {
     position: 'absolute',
@@ -313,13 +361,20 @@ const S = {
     color: 'var(--textMuted)'
   },
   sheetNote: { fontSize: 'var(--fs-md)', color: 'var(--textDim)', marginBottom: 12 },
+  slipNote: {
+    fontSize: 'var(--fs-md)',
+    color: 'var(--danger)',
+    lineHeight: 1.5,
+    marginBottom: 14
+  },
   sheetList: { display: 'flex', flexDirection: 'column', gap: 8 },
   dayRow: {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    background: 'transparent',
+    background: 'var(--panel)',
     border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
     padding: '10px 12px',
     width: '100%'
   },
