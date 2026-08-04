@@ -11,11 +11,13 @@
 // project keeps zero image dependencies for something regenerated once a year.
 
 import { deflateSync } from 'node:zlib'
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public')
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const OUT = join(ROOT, 'public')
+const ANDROID_RES = join(ROOT, 'android', 'app', 'src', 'main', 'res')
 
 const VOID = [0x0a, 0x0a, 0x0b]
 const PULSE = [0xf2, 0xf1, 0xec]
@@ -39,21 +41,26 @@ function chunk(type, data) {
   return Buffer.concat([len, body, crc])
 }
 
-/** @param pixels RGB triples, row-major, length size*size*3 */
-function png(size, pixels) {
+/**
+ * @param pixels  row-major samples, length size*size*channels
+ * @param channels 3 for RGB, 4 for RGBA — the status-bar icon needs the alpha,
+ *                 because Android reads only that channel and tints it.
+ */
+function png(size, pixels, channels = 3) {
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(size, 0)
   ihdr.writeUInt32BE(size, 4)
   ihdr[8] = 8 // bit depth
-  ihdr[9] = 2 // colour type: truecolour RGB
+  ihdr[9] = channels === 4 ? 6 : 2 // colour type: truecolour, with alpha or not
 
+  const stride = size * channels
   // Each scanline is prefixed with its filter byte; 0 = none, which is fine
   // for flat colour and lets deflate do all the work.
-  const raw = Buffer.alloc(size * (size * 3 + 1))
+  const raw = Buffer.alloc(size * (stride + 1))
   for (let y = 0; y < size; y++) {
-    const rowStart = y * (size * 3 + 1)
+    const rowStart = y * (stride + 1)
     raw[rowStart] = 0
-    pixels.copy(raw, rowStart + 1, y * size * 3, (y + 1) * size * 3)
+    pixels.copy(raw, rowStart + 1, y * stride, (y + 1) * stride)
   }
 
   return Buffer.concat([
@@ -113,10 +120,76 @@ function draw(size) {
   return px
 }
 
+/**
+ * The Android status-bar icon, white on transparent.
+ *
+ * Android throws away the colour and keeps only the alpha channel, tinting the
+ * silhouette with the notification colour — so this must have real
+ * transparency. `capacitor.config.json` has named `ic_stat_icon` since the
+ * project was set up and the drawable never existed; without it Android
+ * flattens the launcher icon into a solid white blob.
+ *
+ * A 24dp canvas is far too small for the six-block mark: the blocks land at
+ * about four pixels each at mdpi. So it is the top row alone — three blocks,
+ * two pressed and one empty — which is still the code strip and still says the
+ * same thing.
+ */
+function drawStat(size) {
+  const px = Buffer.alloc(size * size * 4)
+  const rect = (x, y, w, h) => {
+    for (let j = y; j < y + h; j++) {
+      for (let i = x; i < x + w; i++) {
+        if (i < 0 || j < 0 || i >= size || j >= size) continue
+        const p = (j * size + i) * 4
+        px[p] = 0xff
+        px[p + 1] = 0xff
+        px[p + 2] = 0xff
+        px[p + 3] = 0xff
+      }
+    }
+  }
+  const outline = (x, y, w, h, t) => {
+    rect(x, y, w, t)
+    rect(x, y + h - t, w, t)
+    rect(x, y, t, h)
+    rect(x + w - t, y, t, h)
+  }
+
+  // Android expects a little breathing room inside the 24dp box; the system
+  // draws no padding of its own.
+  const pad = Math.round(size * 0.12)
+  const inner = size - pad * 2
+  const gap = Math.max(1, Math.round(inner * 0.09))
+  const block = Math.floor((inner - gap * 2) / 3)
+  const stroke = Math.max(1, Math.round(block / 6))
+  const y = Math.round((size - block) / 2)
+  const x0 = Math.round((size - (block * 3 + gap * 2)) / 2)
+
+  rect(x0, y, block, block)
+  rect(x0 + block + gap, y, block, block)
+  outline(x0 + (block + gap) * 2, y, block, block, stroke)
+
+  return px
+}
+
 for (const size of [180, 192, 512]) {
   const name = size === 180 ? 'apple-touch-icon.png' : `icon-${size}.png`
   writeFileSync(join(OUT, name), png(size, draw(size)))
   console.log(`wrote public/${name} (${size}×${size})`)
+}
+
+// 24dp at each density, the standard status-bar icon ramp.
+for (const [density, size] of [
+  ['mdpi', 24],
+  ['hdpi', 36],
+  ['xhdpi', 48],
+  ['xxhdpi', 72],
+  ['xxxhdpi', 96]
+]) {
+  const dir = join(ANDROID_RES, `drawable-${density}`)
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, 'ic_stat_icon.png'), png(size, drawStat(size), 4))
+  console.log(`wrote android drawable-${density}/ic_stat_icon.png (${size}×${size})`)
 }
 
 // The favicon is the same mark as vector, so a browser tab gets crisp edges.

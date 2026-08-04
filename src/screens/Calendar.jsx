@@ -9,6 +9,7 @@ import { categoryOf } from '../domain/constants'
 import { describeSchedule } from '../domain/schedule'
 import { tap } from '../platform/haptics'
 import { Screen, Button, Sheet, EmptyState, Data } from '../components/ui'
+import DailyLog from '../components/DailyLog'
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -106,6 +107,10 @@ export default function Calendar() {
           dateKey={selected}
           habits={dueToday(doc.habits, selected)}
           slips={slips.get(selected)}
+          dailyLogs={doc.dailyLogs}
+          onSetLog={(field, value) =>
+            dispatch({ type: 'log/set', dateKey: selected, field, value })
+          }
           isFuture={selected > today}
           onToggle={(habit) => {
             tap(habit.completions?.[selected] ? 'light' : 'medium')
@@ -187,7 +192,7 @@ function Legend() {
   )
 }
 
-function DaySheet({ dateKey, habits, slips, isFuture, onToggle, onClose }) {
+function DaySheet({ dateKey, habits, slips, dailyLogs, onSetLog, isFuture, onToggle, onClose }) {
   const label = fromDateKey(dateKey).toLocaleDateString(undefined, {
     weekday: 'long',
     day: 'numeric',
@@ -233,6 +238,18 @@ function DaySheet({ dateKey, habits, slips, isFuture, onToggle, onClose }) {
             />
           ))}
         </div>
+      )}
+
+      {/* Backfilling is the whole reason this sheet exists, and the evening you
+          forgot to tick a habit is the same evening you forgot to log how it
+          went. Not offered for a future day, which has nothing to record yet. */}
+      {!isFuture && (
+        <DailyLog
+          dailyLogs={dailyLogs}
+          dateKey={dateKey}
+          onSet={onSetLog}
+          title="How the day went"
+        />
       )}
     </Sheet>
   )

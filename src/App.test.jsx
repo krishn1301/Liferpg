@@ -31,6 +31,18 @@ vi.mock('@capacitor/filesystem', () => ({
   Encoding: { UTF8: 'utf8' }
 }))
 vi.mock('@capacitor/share', () => ({ Share: { share: async () => {} } }))
+// Never actually reached — `canRemind` is false in jsdom, so every call in
+// platform/reminders.js short-circuits. Mocked so the import itself is inert.
+vi.mock('@capacitor/local-notifications', () => ({
+  LocalNotifications: {
+    checkPermissions: async () => ({ display: 'denied' }),
+    requestPermissions: async () => ({ display: 'denied' }),
+    schedule: async () => ({ notifications: [] }),
+    getPending: async () => ({ notifications: [] }),
+    cancel: async () => {},
+    createChannel: async () => {}
+  }
+}))
 
 vi.stubGlobal('__APP_VERSION__', '0.0.1-test')
 

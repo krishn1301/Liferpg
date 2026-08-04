@@ -28,11 +28,15 @@ export const isStandalone =
 /**
  * Can this build schedule a reminder at all?
  *
- * Only the native Android build can. iOS Safari has no scheduled local
- * notification API — there is no Notification Triggers implementation — and
- * Web Push would need a server, which contradicts the app being offline-only.
+ * Any native build can; no browser can. iOS Safari has no scheduled local
+ * notification API — there is no Notification Triggers implementation — and Web
+ * Push would need a server, which contradicts the app being offline-only. So on
+ * iPhone this is false while LifeRPG is an installed PWA, and becomes true by
+ * itself the day the native iOS target lands. Deliberately not written as
+ * `platform === 'android'`: that would need finding and changing again, and the
+ * thing that actually matters is native versus browser.
  */
-export const canRemind = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+export const canRemind = Capacitor.isNativePlatform()
 
 /**
  * Ask the browser to make our storage durable.

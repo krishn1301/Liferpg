@@ -3,7 +3,9 @@ import { useStore } from '../state/StoreProvider'
 import { useToday } from '../state/useToday'
 import { addDays, startOfWeek, dayOfWeek } from '../domain/dates'
 import { categoryStats, dailyTrend, habitBreakdown, overview, vowBreakdown } from '../domain/stats'
+import { logAverages, moodByCompletion } from '../domain/daily'
 import { earnedBadges } from '../domain/xp'
+import { LOG_SCALE } from '../domain/constants'
 import { Screen, Overline, Panel, Rule, EmptyState, Data, Segmented } from '../components/ui'
 import { Pulsar } from '../components/catalog'
 
@@ -30,6 +32,11 @@ export default function Stats() {
     [doc.habits, from, today]
   )
   const vows = useMemo(() => vowBreakdown(doc.habits, today), [doc.habits, today])
+  const log = useMemo(() => logAverages(doc.dailyLogs, from, today), [doc.dailyLogs, from, today])
+  const split = useMemo(
+    () => moodByCompletion(doc.habits, doc.dailyLogs, from, today),
+    [doc.habits, doc.dailyLogs, from, today]
+  )
   const badges = useMemo(() => earnedBadges(doc.habits, today), [doc.habits, today])
 
   // The pulsar plot wants one ridge per week, weekday across. A day with
@@ -170,6 +177,44 @@ export default function Stats() {
               </div>
             ))}
           </Panel>
+        </>
+      )}
+
+      {log.logged > 0 && (
+        <>
+          <Overline>How you felt</Overline>
+          <Panel flush>
+            {/* Either can be absent on its own: logging energy and skipping
+                mood is a normal evening. An em dash, never a zero. */}
+            <Spec
+              label="Average mood"
+              value={log.mood === null ? '—' : `${log.mood} / ${LOG_SCALE}`}
+              lead
+            />
+            <Rule />
+            <Spec
+              label="Average energy"
+              value={log.energy === null ? '—' : `${log.energy} / ${LOG_SCALE}`}
+            />
+            <Rule />
+            <Spec label="Water a day" value={`${log.water} glasses`} />
+            <Rule />
+            <Spec label="Days logged" value={`${log.logged} of ${log.days}`} />
+          </Panel>
+
+          {/* Two averages, deliberately — not a correlation coefficient. A
+              month of data from one person cannot support one, and printing
+              "r = 0.62" would dress up noise as a finding. */}
+          {split.perfect !== null && split.other !== null && (
+            <Panel style={{ marginTop: 8 }}>
+              <p style={S.plotNote}>
+                Mood averaged <strong>{split.perfect}</strong> on the {split.perfectDays} day
+                {split.perfectDays === 1 ? '' : 's'} you finished everything, against{' '}
+                <strong>{split.other}</strong> on the {split.otherDays} day
+                {split.otherDays === 1 ? '' : 's'} you did not.
+              </p>
+            </Panel>
+          )}
         </>
       )}
 

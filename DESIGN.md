@@ -184,10 +184,11 @@ the softened world, and it is what stops "rounded" turning into "generic".
 - *Furniture* — panels, rows, sheets, inputs, buttons, chips, the tab bar —
   takes `--radius` (16px), `--radius-sm` (10px) or `--radius-pill`.
 - *Marks in the notation* — the code strip, the year strip, calendar cells,
-  badge blocks, the tick scale, the pulsar plot, empty-state blocks — take
-  **no radius at all**. A rounded block stops reading as a printed cell and
-  starts reading as a dot, and the code strip's whole claim is that it is a
-  printed record you can learn to read.
+  badge blocks, the tick scale, the pulsar plot, empty-state blocks, and the
+  daily log's mood, energy and water marks — take **no radius at all**. A
+  rounded block stops reading as a printed cell and starts reading as a dot,
+  and the code strip's whole claim is that it is a printed record you can learn
+  to read.
 
 **Rounded outlines need a fill.** A 16px hairline rectangle on the page's own
 black reads as a floating wire, not a card, so `--panel` became a real surface

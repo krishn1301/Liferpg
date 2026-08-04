@@ -23,6 +23,7 @@ import {
   inputStyle
 } from '../components/ui'
 import { CodeStrip, TickScale, YearStrip, stripDays, vowStripDays } from '../components/catalog'
+import DailyLog from '../components/DailyLog'
 
 export default function Today() {
   const { doc, dispatch } = useStore()
@@ -141,6 +142,14 @@ export default function Today() {
           </div>
         </>
       )}
+
+      {/* Last on the screen on purpose: the day's obligations come first, and
+          this is the thing you fill in once they are behind you. */}
+      <DailyLog
+        dailyLogs={doc.dailyLogs}
+        dateKey={today}
+        onSet={(field, value) => dispatch({ type: 'log/set', dateKey: today, field, value })}
+      />
 
       {relapsing && (
         <RelapseSheet

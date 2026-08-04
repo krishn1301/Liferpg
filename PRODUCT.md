@@ -67,6 +67,12 @@ A one-time import exists for the Electron desktop predecessor's save file
 - XP, levels, badges — the reward layer.
 - Medicines: doses per named time slot, courses with a start and end, adherence.
 - The year strip on Today: how much of the year is gone, 52 blocks, one per week.
+- **Reminders**, per habit with their own times. Derived like everything else:
+  `isDueOn` decides what is scheduled, so a reminder can never disagree with the
+  Today list, and a habit already ticked off goes quiet for the rest of the day.
+- **The daily log** — mood, energy, water and a note per day. Optional by
+  design: a day nobody logged is absent, never zero, so ignoring it for a
+  fortnight cannot make that fortnight read as the worst on record.
 
 **Present but explicitly not core** — retained, not load-bearing, and not entitled to prominence:
 - My Day routine blocks (the time-block timeline).
@@ -76,19 +82,28 @@ A one-time import exists for the Electron desktop predecessor's save file
 - Offline-only, single-device, no backend.
 - Storage is the device's own. On iPhone this is less durable than on Android, so export
   matters more there.
-- **Reminders can only work on Android.** iOS Safari has no scheduled-local-notification API,
-  and Web Push needs a server, which contradicts offline-only. This must be stated honestly in
-  the interface rather than shown as a toggle that silently does nothing.
+- **Reminders need the installed app.** No browser can schedule a local notification without a
+  server, so they are live in the Android APK and dark in the iPhone PWA. The interface says so
+  in words rather than showing a toggle that silently does nothing. The capability check is
+  "native or not", not "Android or not", so iOS turns on by itself once the native target lands.
+- **At most 56 reminders are queued at a time.** iOS holds 64 pending local notifications per
+  app and silently discards the rest; the queue is refilled every time the app is opened.
 - No haptics on iPhone. Any feedback that relies on vibration needs a visual equivalent.
 - Android 7.0+; the author's test device is a Galaxy S9+ on Android 10, which cannot exercise
   the Android 13+ notification-permission prompt that newer phones will show.
-- **No steps and no sleep, and this is settled.** An iPhone PWA cannot read Apple Health —
-  there is no web API for it, which is why apps that show step and sleep data have to be
-  native App Store apps. Building it for Android alone would leave two of the three users
-  looking at an empty panel, so the native plumbing is not worth it.
+- **Steps and sleep are planned, not ruled out.** This reverses an earlier decision, and the
+  reason matters: they were ruled out because an iPhone PWA cannot read Apple Health, which is
+  true and is why such apps must be native. Once LifeRPG ships a native iOS target that premise
+  is gone, so they come back through HealthKit on iOS and Health Connect on Android. The real
+  cost is not the plugin work — it is that health data raises the privacy-disclosure bar on
+  both stores.
 
 **Terminology (binding):** habits, quests, streaks, XP, levels, badges, medicines, doses,
 **vows** (a quit habit) and **relapse** (the day one was broken).
+
+**Platform direction:** LifeRPG is going to both stores — an App Store submission built in
+Xcode on a borrowed Mac, and the sideloaded APK as now. That changes the Users section below:
+it stops being three known people and starts including strangers.
 
 ## Brand Commitments
 
@@ -104,7 +119,7 @@ A one-time import exists for the Electron desktop predecessor's save file
 - Real user data: `%APPDATA%/life-rpg/liferpg-data.json` — 4 habits (Tuition, Supradyn,
   4L Water, Gym), 10 completions between 2026-04-30 and 2026-05-07.
 - Shipped and installed: `v0.1.0`, signed APK, verified surviving a force-stop on real hardware.
-- 267 passing tests.
+- 283 passing tests.
 - **No** testimonials, reviews, user counts, benchmarks, press or case studies exist, and none
   may be invented. There are three users and two of them have not opened it yet.
 

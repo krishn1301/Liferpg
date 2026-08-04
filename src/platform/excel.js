@@ -10,6 +10,7 @@ import {
   dueToday
 } from '../domain/streaks'
 import { isVow, cleanDaysTotal, relapseCount, lastRelapse } from '../domain/quit'
+import { hasLog, logTrend } from '../domain/daily'
 import { XP_PER_COMPLETION } from '../domain/xp'
 import { categoryOf } from '../domain/constants'
 
@@ -23,6 +24,7 @@ import { categoryOf } from '../domain/constants'
 const SHEET = {
   daily: 'Daily Habits',
   stats: 'Statistics',
+  log: 'Daily Log',
   config: 'Config'
 }
 
@@ -101,9 +103,47 @@ export async function buildWorkbook(doc, todayKey) {
 
   buildDailySheet(workbook, builds, dates)
   buildStatsSheet(workbook, builds, vows, from, to, todayKey)
+  buildLogSheet(workbook, doc.dailyLogs, from, to)
   buildConfigSheet(workbook, habits)
 
   return workbook
+}
+
+/**
+ * Mood, energy, water and the day's note.
+ *
+ * A fourth sheet, where the desktop app had three. That contract was worth
+ * keeping while the export was a straight port; it is not worth keeping at the
+ * cost of an export that silently omits data the user entered.
+ *
+ * Days nobody logged are left blank rather than zeroed — a mood of 0 is not the
+ * same fact as no mood, and averaging the two together is the mistake
+ * domain/daily.js exists to avoid.
+ */
+function buildLogSheet(workbook, dailyLogs, from, to) {
+  const sheet = workbook.addWorksheet(SHEET.log, {
+    properties: { tabColor: { argb: 'FF0EA5E9' } }
+  })
+
+  sheet.columns = [
+    { header: 'Date', key: 'date', width: 12 },
+    { header: 'Mood', key: 'mood', width: 8 },
+    { header: 'Energy', key: 'energy', width: 8 },
+    { header: 'Water', key: 'water', width: 8 },
+    { header: 'Note', key: 'note', width: 60 }
+  ]
+  styleHeader(sheet.getRow(1))
+
+  for (const day of logTrend(dailyLogs, from, to)) {
+    if (!hasLog(dailyLogs, day.dateKey)) continue
+    sheet.addRow({
+      date: day.dateKey,
+      mood: day.mood ?? '',
+      energy: day.energy ?? '',
+      water: day.water || '',
+      note: day.note
+    }).alignment = { vertical: 'top', wrapText: true }
+  }
 }
 
 function buildDailySheet(workbook, habits, dates) {
