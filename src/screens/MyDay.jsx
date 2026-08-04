@@ -14,7 +14,8 @@ export default function MyDay() {
   const minutes = useNowMinutes()
 
   const totalMinutes = useMemo(
-    () => blocks.reduce((sum, b) => sum + Math.max(0, minutesOfDay(b.end) - minutesOfDay(b.start)), 0),
+    () =>
+      blocks.reduce((sum, b) => sum + Math.max(0, minutesOfDay(b.end) - minutesOfDay(b.start)), 0),
     [blocks]
   )
 
@@ -25,12 +26,18 @@ export default function MyDay() {
     setEditing(null)
   }
 
-  const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+  const dateLabel = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  })
 
   return (
     <Screen
       title="My Day"
-      subtitle={blocks.length ? `${dateLabel} · ${formatDuration(totalMinutes)} planned` : dateLabel}
+      subtitle={
+        blocks.length ? `${dateLabel} · ${formatDuration(totalMinutes)} planned` : dateLabel
+      }
       action={<Button onClick={() => setEditing({ ...BLANK })}>+ Add</Button>}
     >
       {blocks.length === 0 ? (
@@ -47,11 +54,7 @@ export default function MyDay() {
             return (
               <div key={block.id}>
                 {gap > 0 && <Gap minutes={gap} />}
-                <BlockRow
-                  block={block}
-                  now={minutes}
-                  onClick={() => setEditing({ ...block })}
-                />
+                <BlockRow block={block} now={minutes} onClick={() => setEditing({ ...block })} />
               </div>
             )
           })}
@@ -211,7 +214,11 @@ function BlockSheet({ draft, onClose, onSave, onDelete }) {
                 style={{
                   ...S.catBtn,
                   ...(on
-                    ? { background: 'var(--text)', color: 'var(--onInk)', borderColor: 'var(--text)' }
+                    ? {
+                        background: 'var(--text)',
+                        color: 'var(--onInk)',
+                        borderColor: 'var(--text)'
+                      }
                     : null)
                 }}
               >
@@ -250,8 +257,9 @@ const S = {
     display: 'flex',
     alignItems: 'flex-start',
     gap: 12,
-    background: 'transparent',
+    background: 'var(--panel)',
     border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
     padding: '12px 14px',
     width: '100%'
   },
@@ -308,6 +316,7 @@ const S = {
     minWidth: 0,
     padding: '10px 4px',
     border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-pill)',
     background: 'transparent',
     color: 'var(--textDim)',
     fontSize: 'var(--fs-xs)',

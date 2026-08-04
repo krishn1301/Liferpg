@@ -59,8 +59,14 @@ A one-time import exists for the Electron desktop predecessor's save file
 
 **Core, confirmed:**
 - Habits with schedules (daily, chosen weekdays, or *n* times per week), streaks, skips.
+- **Vows** — the habits you keep by *not* doing something. A vow stores its relapses rather
+  than its completions, because nobody opens an app nightly to tick "I didn't smoke", and a
+  vow needing daily confirmation would read as broken the first time someone forgot. Days
+  clean, best run and clean-day XP are all derived from the slips. A relapse resets the
+  streak and never takes back XP that was already earned.
 - XP, levels, badges — the reward layer.
 - Medicines: doses per named time slot, courses with a start and end, adherence.
+- The year strip on Today: how much of the year is gone, 52 blocks, one per week.
 
 **Present but explicitly not core** — retained, not load-bearing, and not entitled to prominence:
 - My Day routine blocks (the time-block timeline).
@@ -76,8 +82,13 @@ A one-time import exists for the Electron desktop predecessor's save file
 - No haptics on iPhone. Any feedback that relies on vibration needs a visual equivalent.
 - Android 7.0+; the author's test device is a Galaxy S9+ on Android 10, which cannot exercise
   the Android 13+ notification-permission prompt that newer phones will show.
+- **No steps and no sleep, and this is settled.** An iPhone PWA cannot read Apple Health —
+  there is no web API for it, which is why apps that show step and sleep data have to be
+  native App Store apps. Building it for Android alone would leave two of the three users
+  looking at an empty panel, so the native plumbing is not worth it.
 
-**Terminology (binding):** habits, quests, streaks, XP, levels, badges, medicines, doses.
+**Terminology (binding):** habits, quests, streaks, XP, levels, badges, medicines, doses,
+**vows** (a quit habit) and **relapse** (the day one was broken).
 
 ## Brand Commitments
 
@@ -93,7 +104,7 @@ A one-time import exists for the Electron desktop predecessor's save file
 - Real user data: `%APPDATA%/life-rpg/liferpg-data.json` — 4 habits (Tuition, Supradyn,
   4L Water, Gym), 10 completions between 2026-04-30 and 2026-05-07.
 - Shipped and installed: `v0.1.0`, signed APK, verified surviving a force-stop on real hardware.
-- 194 passing tests.
+- 267 passing tests.
 - **No** testimonials, reviews, user counts, benchmarks, press or case studies exist, and none
   may be invented. There are three users and two of them have not opened it yet.
 

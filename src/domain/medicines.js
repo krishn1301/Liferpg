@@ -56,7 +56,9 @@ export function dosesForDay(meds, dailyLogs, dateKey) {
     }
   }
 
-  return out.sort((a, b) => timeRank(a.time) - timeRank(b.time) || a.med.name.localeCompare(b.med.name))
+  return out.sort(
+    (a, b) => timeRank(a.time) - timeRank(b.time) || a.med.name.localeCompare(b.med.name)
+  )
 }
 
 /** Doses taken vs expected over a range. Same shape as the habit stats. */

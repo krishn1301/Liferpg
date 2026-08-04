@@ -13,6 +13,9 @@ export const CATEGORIES = {
 
 export const categoryOf = (key) => CATEGORIES[key] ?? CATEGORIES.personal
 
+// prettier-ignore
+// Two rows of ten, laid out the way the picker draws them. One emoji per line
+// is twenty lines of noise that says less than this does.
 export const ICONS = [
   '⭐', '💪', '📚', '💧', '📖', '🎯', '🧘', '🏃', '✍️', '🎨',
   '🎵', '🍎', '💤', '🧠', '🌿', '☕', '🔥', '💡', '📝', '🏋️'
@@ -99,7 +102,12 @@ export const TEMPLATES = [
     desc: 'Sleep, calm, and less screen',
     habits: [
       { name: 'Meditate', icon: '🧘', category: 'mindfulness', schedule: { type: 'daily' } },
-      { name: 'Journal', icon: '✍️', category: 'personal', schedule: { type: 'weekly', timesPerWeek: 3 } },
+      {
+        name: 'Journal',
+        icon: '✍️',
+        category: 'personal',
+        schedule: { type: 'weekly', timesPerWeek: 3 }
+      },
       { name: 'Lights out by 11', icon: '💤', category: 'health', schedule: { type: 'daily' } }
     ]
   }

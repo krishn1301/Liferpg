@@ -85,6 +85,79 @@ describe('habit/add', () => {
   })
 })
 
+describe('habit/relapse and habit/unrelapse', () => {
+  const withVows = () => {
+    let doc = reducer(emptyDoc(), {
+      type: 'habit/add',
+      habit: { name: 'No fap', kind: 'quit' },
+      todayKey: MON
+    })
+    doc = reducer(doc, {
+      type: 'habit/add',
+      habit: { name: 'No smoking', kind: 'quit' },
+      todayKey: MON
+    })
+    return reducer(doc, { type: 'habit/add', habit: { name: 'Run' }, todayKey: MON })
+  }
+
+  it('breaks every vow named in one action', () => {
+    const doc = withVows()
+    const ids = [doc.habits[0].id, doc.habits[1].id]
+
+    const next = reducer(doc, { type: 'habit/relapse', ids, dateKey: MON })
+
+    expect(next.habits[0].relapses).toEqual({ [MON]: true })
+    expect(next.habits[1].relapses).toEqual({ [MON]: true })
+    // One slip usually breaks more than one thing; the untouched habit proves
+    // the action is a list and not a sweep.
+    expect(next.habits[2].relapses).toEqual({})
+  })
+
+  it('takes a relapse back cleanly', () => {
+    const doc = withVows()
+    const id = doc.habits[0].id
+
+    const broken = reducer(doc, { type: 'habit/relapse', ids: [id], dateKey: MON })
+    const fixed = reducer(broken, { type: 'habit/unrelapse', id, dateKey: MON })
+
+    // Deleted, not stored as false — same rule completions and skips follow.
+    expect(MON in fixed.habits[0].relapses).toBe(false)
+    expect(fixed.habits[0].relapses).toEqual({})
+  })
+
+  it('is idempotent — a double tap does not double-count', () => {
+    const doc = withVows()
+    const id = doc.habits[0].id
+    let next = reducer(doc, { type: 'habit/relapse', ids: [id], dateKey: MON })
+    next = reducer(next, { type: 'habit/relapse', ids: [id], dateKey: MON })
+    expect(Object.keys(next.habits[0].relapses)).toHaveLength(1)
+  })
+
+  it('keeps earlier slips when a new one is recorded', () => {
+    const doc = withVows()
+    const id = doc.habits[0].id
+    let next = reducer(doc, { type: 'habit/relapse', ids: [id], dateKey: '2026-07-20' })
+    next = reducer(next, { type: 'habit/relapse', ids: [id], dateKey: MON })
+    expect(Object.keys(next.habits[0].relapses).sort()).toEqual(['2026-07-20', MON])
+  })
+})
+
+describe('vow migration', () => {
+  it('reads every habit written before vows existed as one you build', () => {
+    const doc = migrate({ habits: [{ id: 'a', name: 'Run', completions: {} }] })
+    expect(doc.habits[0].kind).toBe('build')
+    expect(doc.habits[0].relapses).toEqual({})
+  })
+
+  it('does not overwrite a kind that is already stored', () => {
+    const doc = migrate({
+      habits: [{ id: 'a', name: 'No fap', kind: 'quit', relapses: { [MON]: true } }]
+    })
+    expect(doc.habits[0].kind).toBe('quit')
+    expect(doc.habits[0].relapses).toEqual({ [MON]: true })
+  })
+})
+
 describe('habits/addMany', () => {
   it('applies a template without overshooting the cap', () => {
     const doc = reducer(emptyDoc(), {

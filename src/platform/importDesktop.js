@@ -87,10 +87,7 @@ export function convertDesktopSave(parsed) {
  */
 export function describeImport(parsed, doc) {
   const habits = doc.habits.length
-  const completions = doc.habits.reduce(
-    (sum, h) => sum + Object.keys(h.completions).length,
-    0
-  )
+  const completions = doc.habits.reduce((sum, h) => sum + Object.keys(h.completions).length, 0)
   const derivedXp = doc.habits.reduce(
     (sum, h) => sum + Object.keys(h.completions).length * XP_PER_COMPLETION * (h.xpBonus ?? 1),
     0

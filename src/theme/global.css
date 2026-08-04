@@ -4,31 +4,31 @@
    so nothing here may reach the network.
 
    The world is Factory Records catalogue sleeves — see DESIGN.md. Two rules
-   drive most of what follows: there is no elevation (separation is a 1px
-   line, never a lighter fill), and completion is an inversion. */
+   drive most of what follows: containers are soft and data marks are not, and
+   completion is an inversion. */
 
 :root {
   /* ---- Colour: VOID ground -----------------------------------------------
-     Panels are the same black as the page. `--panel` exists only for surfaces
-     that must sit above the scrim — sheets, the tab bar — and is barely
-     lifted, because a visibly raised card is the wrong world. */
+     `--panel` is a real surface now. A 16px hairline rectangle drawn on the
+     page's own black reads as a floating wire rather than a card, so corners
+     and a fill arrive together — one without the other is worse than neither. */
   --bg: #0a0a0b; /* VOID */
   --surface: #0a0a0b;
   --card: #0a0a0b;
-  --panel: #121214;
-  --input: #121214;
-  --border: #2b2c2e; /* structural hairline: cell edges, panel outlines */
-  --rule: #1b1c1e; /* decorative hairline: separators within one group */
+  --panel: #1a1a1d;
+  --input: #1a1a1d;
+  --border: #35363a; /* structural hairline: cell edges, panel outlines */
+  --rule: #26272a; /* decorative hairline: separators within one group */
 
   /* PULSE. Warm off-white, not #fff — the world's ink is pressed, not lit. */
-  --text: #f2f1ec; /* 16.5:1 on --panel */
-  --textDim: #adb1b4; /* 8.7:1 on --panel */
-  --textMuted: #7c8083; /* 4.7:1 on --panel — at the AA floor, do not darken */
+  --text: #f2f1ec; /* 15.4:1 on --panel */
+  --textDim: #adb1b4; /* 8.0:1 on --panel */
+  --textMuted: #86898c; /* 4.9:1 on --panel — the AA floor is 4.5, do not darken */
 
   /* ENERGY. The signal colour, and the only chromatic accent in the chrome:
      it marks what is live, next, or just earned. Everything else is ink. */
-  --accent: #e9b417; /* 9.8:1 on --panel */
-  --danger: #f0574c; /* 5.5:1 */
+  --accent: #e9b417; /* 9.1:1 on --panel */
+  --danger: #f0574c; /* 5.1:1 */
   --warn: #e9b417;
   --onAccent: #0a0a0b; /* 10.4:1 on --accent */
   /* Text on an inverted row — the completion state fills with --text. */
@@ -59,10 +59,22 @@
   --font-sans: 'Archivo Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
 
+  /* ---- Radius ------------------------------------------------------------
+     One rule keeps this coherent: **containers round, data stays geometric.**
+     Panels, rows, sheets, inputs and buttons are furniture and get corners.
+     The code strip, the year strip, calendar cells, badge blocks and the tick
+     scale are marks in a notation — a rounded block stops reading as a
+     printed cell and starts reading as a dot, which is a different language. */
+  --radius: 16px; /* panels, rows, sheets, the tab bar */
+  --radius-sm: 10px; /* inputs, nested cells, sheet-internal blocks */
+  --radius-pill: 999px; /* buttons, chips, segmented controls */
+
   /* ---- Metrics ---------------------------------------------------------- */
   /* Android accessibility guidance is 48dp. Nothing tappable goes under it. */
   --touch: 48px;
-  --tab-height: 58px;
+  /* The tab cell, not the bar: the bar floats, so it adds its own padding,
+     border and dock gutter on top of this. */
+  --tab-height: 54px;
 
   /* Notch, gesture bar, and iOS home indicator. */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -77,19 +89,21 @@
   --bg: #eeece4;
   --surface: #eeece4;
   --card: #eeece4;
-  --panel: #f7f6f1;
-  --input: #f7f6f1;
+  /* Paper stock on a paper ground: the card is the whiter of the two, which is
+     the same "lifted" relationship the dark theme states in reverse. */
+  --panel: #ffffff;
+  --input: #ffffff;
   --border: #c9c6ba;
   --rule: #dedbd0;
 
-  --text: #0a0a0b; /* 18.3:1 on --panel */
-  --textDim: #4a4d4f; /* 7.9:1 */
-  --textMuted: #63676a; /* 5.3:1 */
+  --text: #0a0a0b; /* 19.8:1 on --panel */
+  --textDim: #4a4d4f; /* 8.6:1 */
+  --textMuted: #63676a; /* 5.7:1 */
 
   /* ENERGY translated. #e9b417 measures 1.6:1 on paper and is unreadable as
      text or as a mark; the role survives, the value cannot. */
-  --accent: #7d5500; /* 6.1:1 */
-  --danger: #b0201c; /* 6.3:1 */
+  --accent: #7d5500; /* 6.6:1 */
+  --danger: #b0201c; /* 6.8:1 */
   --warn: #7d5500;
   --onAccent: #f2f1ec; /* 5.9:1 on --accent */
   --onInk: #f2f1ec; /* 17.5:1 on --text */

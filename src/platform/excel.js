@@ -2,7 +2,14 @@ import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { isNative } from './storage'
 import { rangeKeys, toDateKey } from '../domain/dates'
-import { activeHabits, completionRate, currentStreak, dueToday } from '../domain/streaks'
+import {
+  activeHabits,
+  bestStreak,
+  completionRate,
+  currentStreak,
+  dueToday
+} from '../domain/streaks'
+import { isVow, cleanDaysTotal, relapseCount, lastRelapse } from '../domain/quit'
 import { XP_PER_COMPLETION } from '../domain/xp'
 import { categoryOf } from '../domain/constants'
 
@@ -76,7 +83,15 @@ export async function buildWorkbook(doc, todayKey) {
   const { default: ExcelJS } = await import('exceljs')
 
   const habits = activeHabits(doc.habits)
-  const dates = exportDates(habits, todayKey)
+  // The daily grid is a grid of ticks. A vow has no completions to tick, so a
+  // vow row would be an unbroken run of blanks reading as total failure — the
+  // exact opposite of what a kept vow is. They get their own block on the
+  // stats sheet instead, and they stay in Config because that sheet is the
+  // record dump, not a report.
+  const builds = habits.filter((h) => !isVow(h))
+  const vows = habits.filter(isVow)
+
+  const dates = exportDates(builds, todayKey)
   const from = dates[0]
   const to = dates[dates.length - 1]
 
@@ -84,8 +99,8 @@ export async function buildWorkbook(doc, todayKey) {
   workbook.creator = 'LifeRPG'
   workbook.created = new Date()
 
-  buildDailySheet(workbook, habits, dates)
-  buildStatsSheet(workbook, habits, from, to, todayKey)
+  buildDailySheet(workbook, builds, dates)
+  buildStatsSheet(workbook, builds, vows, from, to, todayKey)
   buildConfigSheet(workbook, habits)
 
   return workbook
@@ -168,7 +183,7 @@ function buildDailySheet(workbook, habits, dates) {
   pctRow.height = 24
 }
 
-function buildStatsSheet(workbook, habits, from, to, todayKey) {
+function buildStatsSheet(workbook, habits, vows, from, to, todayKey) {
   const sheet = workbook.addWorksheet(SHEET.stats, {
     properties: { tabColor: { argb: 'FF8B5CF6' } }
   })
@@ -205,6 +220,58 @@ function buildStatsSheet(workbook, habits, from, to, todayKey) {
     })
   }
 
+  // Vows below the habits, under their own header. The columns are reused
+  // rather than added: "Current Streak" is days clean, "Total Completions" is
+  // clean days banked, "Completion Rate" is the best run ever. Sharing the
+  // grid keeps one table instead of two, and the header row says which is which.
+  if (vows.length > 0) {
+    sheet.addRow({})
+    styleHeader(
+      sheet.addRow({
+        name: 'VOWS',
+        category: 'Category',
+        streak: 'Days Clean',
+        total: 'Clean Days',
+        rate: 'Best Run',
+        xp: 'XP Earned'
+      })
+    )
+
+    for (const vow of vows) {
+      const clean = cleanDaysTotal(vow, todayKey)
+      const xp = clean * XP_PER_COMPLETION * (vow.xpBonus ?? 1)
+      totalXpEarned += xp
+
+      sheet.addRow({
+        name: `${vow.icon ?? ''} ${vow.name}`.trim(),
+        category: titleCase(vow.category),
+        streak: `${currentStreak(vow, todayKey).streak} days`,
+        total: clean,
+        rate: `${bestStreak(vow, todayKey)} days`,
+        xp
+      })
+    }
+
+    sheet.addRow({})
+    styleHeader(
+      sheet.addRow({
+        name: 'RELAPSES',
+        category: 'Times Broken',
+        streak: 'Last Relapse',
+        total: 'Clean Since'
+      })
+    )
+
+    for (const vow of vows) {
+      sheet.addRow({
+        name: `${vow.icon ?? ''} ${vow.name}`.trim(),
+        category: relapseCount(vow),
+        streak: lastRelapse(vow, todayKey) ?? 'never',
+        total: vow.createdKey ?? ''
+      })
+    }
+  }
+
   sheet.addRow({})
   sheet.addRow({
     name: '📊 TOTAL',
@@ -221,23 +288,34 @@ function buildConfigSheet(workbook, habits) {
   sheet.columns = [
     { header: 'ID', key: 'id', width: 18 },
     { header: 'Name', key: 'name', width: 24 },
+    { header: 'Type', key: 'kind', width: 8 },
     { header: 'Category', key: 'category', width: 14 },
     { header: 'Icon', key: 'icon', width: 8 },
     { header: 'XP Bonus', key: 'xpBonus', width: 10 },
     { header: 'Schedule', key: 'schedule', width: 18 },
-    { header: 'Created', key: 'created', width: 12 }
+    { header: 'Created', key: 'created', width: 12 },
+    { header: 'Relapses', key: 'relapses', width: 30 }
   ]
   styleHeader(sheet.getRow(1))
 
   for (const habit of habits) {
+    const vow = isVow(habit)
     sheet.addRow({
       id: habit.id,
       name: habit.name,
+      kind: vow ? 'quit' : 'build',
       category: habit.category,
       icon: habit.icon,
       xpBonus: habit.xpBonus ?? 1,
-      schedule: JSON.stringify(habit.schedule),
-      created: habit.createdKey ?? ''
+      // A vow has no schedule; printing `{"type":"daily"}` next to one would
+      // suggest it is due every day, which is precisely what it is not.
+      schedule: vow ? '' : JSON.stringify(habit.schedule),
+      created: habit.createdKey ?? '',
+      relapses: vow
+        ? Object.keys(habit.relapses ?? {})
+            .sort()
+            .join(' ')
+        : ''
     })
   }
 }

@@ -42,10 +42,7 @@ describe('Perfect Day counts only what was scheduled', () => {
   })
 
   it('is not earned when something actually due is left undone', () => {
-    const habits = [
-      habit({ id: 'a', completions: { [TUE]: true } }),
-      habit({ id: 'b' })
-    ]
+    const habits = [habit({ id: 'a', completions: { [TUE]: true } }), habit({ id: 'b' })]
     expect(badge(habits, TUE, 'perfect-day').earned).toBe(false)
   })
 
