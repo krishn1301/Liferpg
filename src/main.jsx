@@ -9,9 +9,14 @@ import '@fontsource-variable/archivo/wdth.css'
 import '@fontsource-variable/jetbrains-mono'
 import './theme/global.css'
 import { applyTheme } from './theme/tokens'
+import { watchForUpdates } from './platform/updates'
 import App from './App'
 
 applyTheme('dark')
+
+// Registered before React mounts, so the check for "was there already a
+// controller" happens before the new worker has a chance to claim the page.
+watchForUpdates()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
