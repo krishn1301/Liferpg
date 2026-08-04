@@ -9,7 +9,15 @@ const { version } = JSON.parse(readFileSync('./package.json', 'utf-8'))
 // GitHub Pages serves from /<repo>/, so CI sets PAGES_BASE to override.
 const base = process.env.PAGES_BASE || './'
 
-export default defineConfig({
+/**
+ * `--mode capacitor` marks a build destined for the APK rather than the web.
+ *
+ * Vite's own mode flag rather than an environment variable: `FOO=1 npm run build`
+ * is not valid in the Windows shell, and this avoids adding a dependency to set
+ * one flag. `vite build` passes 'production' as its defaultNodeEnv regardless of
+ * mode, so a custom mode is still a minified production build.
+ */
+export default defineConfig(({ mode }) => ({
   base,
   define: {
     __APP_VERSION__: JSON.stringify(version)
@@ -18,6 +26,21 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // ---- No live service worker inside the APK ----------------------------
+      // Capacitor serves the WebView from https://localhost — a secure context,
+      // so the worker registers and takes control. It then caches assets that
+      // are *already local files inside the APK*: no offline benefit the native
+      // shell doesn't have, and one real cost. Installing a new APK replaces the
+      // files on disk while the old worker keeps serving its cached copy, so the
+      // first launch after an update shows the previous version. Reproduced on a
+      // Galaxy S9+ going 0.1.0 → 0.3.0: launch one was the old UI, launch two
+      // was the new one.
+      //
+      // `selfDestroying` rather than simply omitting the plugin, because an
+      // absent worker would leave the one already registered on every installed
+      // phone in place forever. This ships a worker whose only job is to
+      // unregister itself and delete its caches.
+      selfDestroying: mode === 'capacitor',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'LifeRPG',
@@ -79,4 +102,4 @@ export default defineConfig({
     include: ['src/**/*.test.{js,jsx}'],
     setupFiles: ['src/test/setup.js']
   }
-})
+}))

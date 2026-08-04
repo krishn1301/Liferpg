@@ -35,7 +35,11 @@ jobs:
         run: npm test
 
       - name: Build web bundle
-        run: npm run build
+        # Not `npm run build`: the native build ships a self-destroying service
+        # worker instead of a live one. See the comment in vite.config.js — a
+        # worker inside the APK caches files that are already local and makes
+        # the first launch after an update show the previous version.
+        run: npm run build:native
 
       - name: Sync Capacitor
         run: npx cap sync android
