@@ -527,6 +527,7 @@ const S = {
     width: '100%'
   },
   name: {
+    fontFamily: 'var(--font-mono)',
     fontSize: 'var(--fs-base)',
     fontWeight: 600,
     color: 'var(--text)',

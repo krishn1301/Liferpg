@@ -8,6 +8,7 @@ import { earnedBadges } from '../domain/xp'
 import { LOG_SCALE } from '../domain/constants'
 import { Screen, Overline, Panel, Rule, EmptyState, Data, Segmented } from '../components/ui'
 import { Pulsar } from '../components/catalog'
+import Status from '../components/Status'
 
 const RANGES = [
   { days: 7, label: '7d' },
@@ -74,6 +75,12 @@ export default function Stats() {
       subtitle={`Last ${days} days`}
       action={<RangePicker value={days} onChange={setDays} />}
     >
+      {/* The character sheet first: it is the screen's identity, and the spec
+          sheet below answers "how am I doing" once you know who you are. */}
+      <Status habits={doc.habits} todayKey={today} />
+
+      <Overline>Summary</Overline>
+
       {/* A spec sheet, not a grid of tiles. Six numbers in a ruled column are
           read top-to-bottom in one pass; six centred cards make the eye hop. */}
       <Panel flush>

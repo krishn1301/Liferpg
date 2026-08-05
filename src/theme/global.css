@@ -3,38 +3,48 @@
    build's Google Fonts @import was blocked by CSP and silently never loaded,
    so nothing here may reach the network.
 
-   The world is Factory Records catalogue sleeves — see DESIGN.md. Two rules
-   drive most of what follows: containers are soft and data marks are not, and
-   completion is an inversion. */
+   The world is the System — see DESIGN.md. Three rules drive most of what
+   follows: the ground is near-black with a blue cast, SIGNAL blue marks what is
+   live, and completion is an inversion. Containers stay soft; data marks do not.
+
+   Every ratio in this file was computed, not judged. `scripts/` has no contrast
+   tool, so the numbers come from a one-off WCAG relative-luminance pass — if a
+   value moves, run one again rather than trusting the old comment. */
 
 :root {
   /* ---- Colour: VOID ground -----------------------------------------------
-     `--panel` is a real surface now. A 16px hairline rectangle drawn on the
-     page's own black reads as a floating wire rather than a card, so corners
-     and a fill arrive together — one without the other is worse than neither. */
-  --bg: #0a0a0b; /* VOID */
-  --surface: #0a0a0b;
-  --card: #0a0a0b;
-  --panel: #1a1a1d;
-  --input: #1a1a1d;
-  --border: #35363a; /* structural hairline: cell edges, panel outlines */
-  --rule: #26272a; /* decorative hairline: separators within one group */
+     Near-black, but not neutral: a blue cast under everything is what makes an
+     overlay read as projected rather than printed. `--panel` is a real surface
+     — a 16px hairline rectangle on the page's own black reads as a floating
+     wire rather than a window. */
+  --bg: #05070d; /* VOID */
+  --surface: #05070d;
+  --card: #05070d;
+  --panel: #0d1420;
+  --input: #0d1420;
+  --border: #24405f; /* structural hairline: cell edges, panel outlines */
+  --rule: #16273d; /* decorative hairline: separators within one group */
 
-  /* PULSE. Warm off-white, not #fff — the world's ink is pressed, not lit. */
-  --text: #f2f1ec; /* 15.4:1 on --panel */
-  --textDim: #adb1b4; /* 8.0:1 on --panel */
-  --textMuted: #86898c; /* 4.9:1 on --panel — the AA floor is 4.5, do not darken */
+  /* GLASS. Pale blue-white, not #fff — the ink here is lit, not pressed. */
+  --text: #dce9f5; /* 15.0:1 on --panel */
+  --textDim: #8fa9c4; /* 7.6:1 on --panel */
+  --textMuted: #6b83a0; /* 4.7:1 on --panel — the AA floor is 4.5, do not darken */
 
-  /* ENERGY. The signal colour, and the only chromatic accent in the chrome:
-     it marks what is live, next, or just earned. Everything else is ink. */
-  --accent: #e9b417; /* 9.1:1 on --panel */
-  --danger: #f0574c; /* 5.1:1 */
-  --warn: #e9b417;
-  --onAccent: #0a0a0b; /* 10.4:1 on --accent */
+  /* SIGNAL. The one chromatic accent in the chrome: what is live, next, or
+     just earned. Everything else is ink. */
+  --accent: #4da6ff; /* 7.2:1 on --panel */
+  --danger: #ff5570; /* 6.0:1 — CAUTION, relapses, destructive actions */
+  --warn: #4da6ff;
+  --onAccent: #05070d; /* 7.9:1 on --accent */
   /* Text on an inverted row — the completion state fills with --text. */
-  --onInk: #0a0a0b; /* 17.5:1 on --text */
+  --onInk: #05070d; /* 16.4:1 on --text */
 
-  --scrim: rgba(0, 0, 0, 0.72);
+  /* The halo. Decoration only, and strictly rationed — see the `.glow` rule
+     near the bottom of this file for where it is allowed. */
+  --glow: 0 0 14px rgba(77, 166, 255, 0.45);
+  --glow-soft: 0 0 10px rgba(77, 166, 255, 0.22);
+
+  --scrim: rgba(2, 4, 10, 0.76);
 
   /* ---- Type scale --------------------------------------------------------
      rem, never px. Every size is relative to the root, so the WebView's text
@@ -83,30 +93,36 @@
   color-scheme: dark;
 }
 
-/* PULSE ground. The same grammar on paper, not a second design: identical
-   structure, identical rules, ink and ground exchanged. */
+/* DAYLIGHT ground. The same grammar in daylight, not a second design:
+   identical structure, identical rules, ink and ground exchanged.
+   The System has no light mode of its own — this is the concession the app
+   makes to being read outdoors, and the glow switches off entirely below. */
 :root[data-theme='light'] {
-  --bg: #eeece4;
-  --surface: #eeece4;
-  --card: #eeece4;
+  --bg: #eef3f9;
+  --surface: #eef3f9;
+  --card: #eef3f9;
   /* Paper stock on a paper ground: the card is the whiter of the two, which is
      the same "lifted" relationship the dark theme states in reverse. */
   --panel: #ffffff;
   --input: #ffffff;
-  --border: #c9c6ba;
-  --rule: #dedbd0;
+  --border: #c2d2e4;
+  --rule: #dde7f2;
 
-  --text: #0a0a0b; /* 19.8:1 on --panel */
-  --textDim: #4a4d4f; /* 8.6:1 */
-  --textMuted: #63676a; /* 5.7:1 */
+  --text: #0b1622; /* 18.2:1 on --panel */
+  --textDim: #3d5570; /* 7.7:1 */
+  --textMuted: #5a748f; /* 4.9:1 */
 
-  /* ENERGY translated. #e9b417 measures 1.6:1 on paper and is unreadable as
-     text or as a mark; the role survives, the value cannot. */
-  --accent: #7d5500; /* 6.6:1 */
-  --danger: #b0201c; /* 6.8:1 */
-  --warn: #7d5500;
-  --onAccent: #f2f1ec; /* 5.9:1 on --accent */
-  --onInk: #f2f1ec; /* 17.5:1 on --text */
+  /* SIGNAL translated. #4da6ff measures about 2:1 on white and is unreadable
+     as text there; the role survives, the value cannot. */
+  --accent: #1d4ed8; /* 6.7:1 */
+  --danger: #c02a3e; /* 5.8:1 */
+  --warn: #1d4ed8;
+  --onAccent: #eef3f9; /* 6.0:1 on --accent */
+  --onInk: #eef3f9; /* 17.0:1 on --text */
+
+  /* No halo in daylight. A glow on paper reads as a printing fault, not power. */
+  --glow: none;
+  --glow-soft: none;
 
   --scrim: rgba(10, 10, 11, 0.55);
 
@@ -197,6 +213,27 @@ button:disabled {
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border);
+}
+
+/* ---- The halo ------------------------------------------------------------
+   The System's windows are lit from inside. That effect is one `text-shadow`
+   and one `box-shadow`, and the whole risk is overuse: a halo on a paragraph
+   turns readable text into fog, and this app is read half awake.
+
+   So the rule is a short allow-list, not a judgement call:
+
+     .glow       display type only — screen titles, the level numeral, a stat
+     .glow-edge  a panel edge that is *live*: today's cell, the selected tab
+
+   Body copy, meta rows, habit names and anything below --fs-base never glow.
+   `--glow` resolves to `none` in daylight, so both classes are inert there
+   without a single media query or second rule. */
+.glow {
+  text-shadow: var(--glow);
+}
+
+.glow-edge {
+  box-shadow: var(--glow-soft);
 }
 
 /* ---- The completion sweep ------------------------------------------------

@@ -17,16 +17,17 @@
 // user has — see the type scale in theme/global.css.
 
 /**
- * Screen frame. The header is a catalogue masthead: an engraved condensed
- * title, a monospace subtitle beneath it, and a rule closing the block off
- * from the content.
+ * Screen frame. A System header: the title in the display mono, lit, with a
+ * monospace subtitle beneath and a rule closing the block off from the content.
  */
 export function Screen({ title, subtitle, action, children }) {
   return (
     <div style={S.screen}>
       <header style={S.header}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <h1 style={S.title}>{title}</h1>
+          <h1 className="glow" style={S.title}>
+            {title}
+          </h1>
           {subtitle && <p style={S.subtitle}>{subtitle}</p>}
         </div>
         {action}
@@ -37,11 +38,19 @@ export function Screen({ title, subtitle, action, children }) {
 }
 
 /**
- * Monospace section label. Data-layer type: this names a block of records, so
- * it is set the same way a column heading is.
+ * Section label, ruled top and bottom.
+ *
+ * The System window announces every block between two thin bright lines. Here
+ * that is one hairline above the label and one below, which also does the job
+ * the old bare overline was doing badly: separating a section from whatever
+ * panel ended immediately above it.
  */
 export function Overline({ children, style }) {
-  return <h2 style={{ ...S.overline, ...style }}>{children}</h2>
+  return (
+    <div style={{ ...S.overlineWrap, ...style }}>
+      <h2 style={S.overline}>{children}</h2>
+    </div>
+  )
 }
 
 /**
@@ -207,16 +216,16 @@ const S = {
     marginBottom: 20,
     borderBottom: '1px solid var(--border)'
   },
-  // Engraved: the width axis pushed to 78%, heavy, uppercase, opened up. This
-  // is the only place the condensed axis is used — body text stays at 100%,
-  // because condensed prose is slower to read and this app is read half awake.
+  // The display face is the mono. Archivo's condensed axis carried the old
+  // world's engraved masthead; the System has no engraving — it has terminal
+  // type, opened up and lit.
   title: {
+    fontFamily: 'var(--font-mono)',
     fontSize: 'var(--fs-2xl)',
-    fontWeight: 800,
-    fontStretch: '78%',
-    letterSpacing: '0.06em',
+    fontWeight: 700,
+    letterSpacing: '0.08em',
     textTransform: 'uppercase',
-    lineHeight: 1.05
+    lineHeight: 1.1
   },
   subtitle: {
     fontFamily: 'var(--font-mono)',
@@ -226,15 +235,20 @@ const S = {
     textTransform: 'uppercase',
     marginTop: 7
   },
+  // More space above than below: the label belongs to what follows it.
+  overlineWrap: {
+    margin: '28px 0 10px',
+    borderTop: '1px solid var(--rule)',
+    borderBottom: '1px solid var(--rule)',
+    padding: '7px 0'
+  },
   overline: {
     fontFamily: 'var(--font-mono)',
     fontSize: 'var(--fs-2xs)',
     fontWeight: 600,
     textTransform: 'uppercase',
     letterSpacing: '0.14em',
-    color: 'var(--textMuted)',
-    // More space above than below: the label belongs to what follows it.
-    margin: '28px 0 10px'
+    color: 'var(--textMuted)'
   },
   panel: {
     background: 'var(--panel)',

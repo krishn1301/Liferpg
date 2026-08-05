@@ -58,7 +58,9 @@ export default function Today() {
             <Data style={S.levelLabel}>Level</Data>
             <Data style={S.xpText}>{xp} XP</Data>
           </div>
-          <div style={S.levelNumber}>{String(level.level).padStart(2, '0')}</div>
+          <div className="glow" style={S.levelNumber}>
+            {String(level.level).padStart(2, '0')}
+          </div>
           <TickScale
             value={level.current / level.needed}
             label={`Level ${level.level}, ${level.current} of ${level.needed} XP to level ${level.level + 1}`}
@@ -87,9 +89,22 @@ export default function Today() {
                 label={`${done} of ${habits.length} quests done today`}
               />
               <Data style={S.dayCount}>
-                {done} / {habits.length} done
+                [ {done} / {habits.length} ]
               </Data>
             </div>
+
+            {/* The System's caution line. It states what is left, not what will
+                happen — the app forgives two missed days a month, so "this will
+                break your streak" would be a threat it does not carry out. */}
+            {done < habits.length && (
+              <>
+                <Rule />
+                <Data style={S.caution}>
+                  Caution · {habits.length - done} quest
+                  {habits.length - done === 1 ? '' : 's'} unfinished
+                </Data>
+              </>
+            )}
           </>
         )}
       </Panel>
@@ -373,6 +388,7 @@ const S = {
   // The one hero numeral on this screen, engraved. Two digits always, because
   // a level that changes width as it grows makes the whole panel twitch.
   levelNumber: {
+    fontFamily: 'var(--font-mono)',
     fontSize: 'var(--fs-3xl)',
     fontWeight: 800,
     fontStretch: '78%',
@@ -401,6 +417,15 @@ const S = {
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
     color: 'var(--textDim)'
+  },
+  caution: {
+    display: 'block',
+    padding: '11px 16px',
+    fontSize: 'var(--fs-2xs)',
+    fontWeight: 600,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    color: 'var(--danger)'
   },
   list: { display: 'flex', flexDirection: 'column', gap: 8 },
   vowHead: {
@@ -490,9 +515,12 @@ const S = {
   },
   rowIcon: { fontSize: 'var(--fs-xl)', flexShrink: 0, alignSelf: 'flex-start', marginTop: 1 },
   rowTop: { display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 },
-  // Sentence case, normal width, readable weight. The world would set this as
-  // a tracked-out code; a name has to be legible before it is stylish.
+  // Mono, but sentence case with normal tracking. The System sets everything as
+  // terminal type and a habit name should read the same way — what a name must
+  // never become is a tracked-out capital code, because it has to be legible
+  // before it is stylish.
   rowName: {
+    fontFamily: 'var(--font-mono)',
     fontSize: 'var(--fs-base)',
     fontWeight: 600,
     overflow: 'hidden',

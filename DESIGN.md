@@ -1,48 +1,51 @@
 ---
 name: LifeRPG
-description: A habit tracker built as a record catalogue, softened. Void-black ground, engraved condensed caps against monospace data, and a colour-code strip that encodes a week at a glance. Containers are rounded and filled; the data marks inside them stay square. Completion is an inversion, not a tick. Phone-first — every rule assumes a thumb, a 411px viewport and no mouse.
+description: A habit tracker set as a game System overlay. Near-black ground with a blue cast, SIGNAL blue for what is live, terminal monospace throughout, and a colour-code strip that encodes a week at a glance. Containers are rounded and filled; the data marks inside them stay square. Completion is an inversion, not a tick. Phone-first — every rule assumes a thumb, a 411px viewport and no mouse.
 
 # The source of truth for colour, type and radius is src/theme/global.css.
 # This frontmatter is the portable export the detector reads. If a token
 # changes there, change it here in the same commit.
 colors:
   # ---- Dark: the canonical ground. ------------------------------------
-  # `panel` is a real surface. Corners without a fill read as a floating
-  # wire rather than a card, so the two arrived together — see "Containers
-  # round" below. Every ratio here is measured against `panel`, the
-  # lightest ground any text sits on.
-  bg: '#0a0a0b' # VOID
-  surface: '#0a0a0b'
-  card: '#0a0a0b'
-  panel: '#1a1a1d'
-  input: '#1a1a1d'
-  border: '#35363a' # hairline, structural
-  rule: '#26272a' # hairline, decorative — separators inside a group
-  text: '#f2f1ec' # PULSE — warm off-white, 15.4:1
-  text-dim: '#adb1b4' # 8.0:1
-  text-muted: '#86898c' # 4.9:1 — lifted with the panel; 4.5 is the floor
-  accent: '#e9b417' # ENERGY — the signal colour: what is live, next, or earned
-  danger: '#f0574c' # 5.1:1
-  warn: '#e9b417'
-  on-accent: '#0a0a0b'
-  on-ink: '#0a0a0b' # text drawn on an inverted (PULSE-filled) row
+  # Near-black but not neutral — a blue cast under everything is what makes
+  # an overlay read as projected rather than printed. `panel` is a real
+  # surface: corners without a fill read as a floating wire rather than a
+  # window. Every ratio here is measured against `panel`, the lightest
+  # ground any text sits on.
+  bg: '#05070d' # VOID
+  surface: '#05070d'
+  card: '#05070d'
+  panel: '#0d1420'
+  input: '#0d1420'
+  border: '#24405f' # hairline, structural
+  rule: '#16273d' # hairline, decorative — separators inside a group
+  text: '#dce9f5' # GLASS — pale blue-white, lit not pressed, 15.0:1
+  text-dim: '#8fa9c4' # 7.6:1
+  text-muted: '#6b83a0' # 4.7:1 — the least headroom in the palette; 4.5 is the floor
+  accent: '#4da6ff' # SIGNAL — what is live, next, or just earned
+  danger: '#ff5570' # 6.0:1 — CAUTION, relapses, destructive actions
+  warn: '#4da6ff'
+  on-accent: '#05070d'
+  on-ink: '#05070d' # text drawn on an inverted (GLASS-filled) row
 
-  # ---- Light: PULSE ground, the same grammar inverted. ------------------
-  light-bg: '#eeece4'
-  light-surface: '#eeece4'
-  light-card: '#eeece4'
+  # ---- Light: DAYLIGHT ground, the same grammar inverted. ---------------
+  # The System has no light mode of its own. This is the concession the app
+  # makes to being read outdoors, and the glow switches off entirely here.
+  light-bg: '#eef3f9'
+  light-surface: '#eef3f9'
+  light-card: '#eef3f9'
   light-panel: '#ffffff' # paper stock on a paper ground
   light-input: '#ffffff'
-  light-border: '#c9c6ba'
-  light-rule: '#dedbd0'
-  light-text: '#0a0a0b' # 19.8:1
-  light-text-dim: '#4a4d4f' # 8.6:1
-  light-text-muted: '#63676a' # 5.7:1
-  light-accent: '#7d5500' # ENERGY translated: yellow on paper is unreadable
-  light-danger: '#b0201c'
-  light-warn: '#7d5500'
-  light-on-accent: '#f2f1ec'
-  light-on-ink: '#f2f1ec'
+  light-border: '#c2d2e4'
+  light-rule: '#dde7f2'
+  light-text: '#0b1622' # 18.2:1
+  light-text-dim: '#3d5570' # 7.7:1
+  light-text-muted: '#5a748f' # 4.9:1
+  light-accent: '#1d4ed8' # SIGNAL translated: #4da6ff is ~2:1 on white
+  light-danger: '#c02a3e'
+  light-warn: '#1d4ed8'
+  light-on-accent: '#eef3f9'
+  light-on-ink: '#eef3f9'
 
   # ---- Category block colours. -----------------------------------------
   # Fills in a code strip, never text. Every one clears 3:1 against BOTH
@@ -58,7 +61,15 @@ colors:
   cat-social: '#94741b'
   cat-creative: '#c25e10'
 
-  scrim: 'rgba(0,0,0,0.72)'
+  scrim: 'rgba(2,4,10,0.76)'
+
+glow:
+  # The halo, and the allow-list that keeps it from becoming fog. Decoration
+  # only: a glow on a paragraph turns readable text into a smear, and this app
+  # is read half awake. Resolves to `none` in daylight, so both utilities are
+  # inert there without a media query.
+  glow: '0 0 14px rgba(77,166,255,0.45)' # .glow — display type only
+  glow-soft: '0 0 10px rgba(77,166,255,0.22)' # .glow-edge — a live panel edge
 
 typography:
   scale:
@@ -73,21 +84,22 @@ typography:
     '15': '0.9375rem' # body, inputs, habit names
     '17': '1.0625rem' # tab icons
     '20': '1.25rem' # row icons, tile values
-    '28': '1.75rem' # screen titles (engraved caps)
+    '28': '1.75rem' # screen titles (terminal caps, lit)
     '38': '2.375rem' # the one hero numeral per screen
-    '64': '4rem' # the level-up card's numeral
+    '64': '4rem' # the level-up card's numeral, and the STATUS level
   body:
+    # Prose only: the intro paragraph, empty-state hints, the explanations in
+    # Settings. Everything that is a name, a label or a number is mono.
     fontFamily: "'Archivo Variable', 'Segoe UI', system-ui, -apple-system, sans-serif"
     fontSize: '0.9375rem'
     fontWeight: 450
   title:
-    # Engraved: condensed width axis, heavy, uppercase, opened up. This is
-    # the one place the width axis is pushed — body text stays at 100%.
-    fontFamily: "'Archivo Variable', 'Segoe UI', system-ui, -apple-system, sans-serif"
+    # Terminal type, opened up and lit. The System has no engraving, so
+    # Archivo's condensed axis is no longer used anywhere.
+    fontFamily: "'JetBrains Mono Variable', ui-monospace, 'Cascadia Mono', monospace"
     fontSize: '1.75rem'
-    fontWeight: 800
-    fontStretch: '78%'
-    letterSpacing: '0.06em'
+    fontWeight: 700
+    letterSpacing: '0.08em'
     textTransform: 'uppercase'
   overline:
     # Data, labels, codes, times, counts. Monospace here is measurement, not
@@ -119,27 +131,38 @@ spacing:
 
 ## The world
 
-**Factory Records catalogue sleeves.** Peter Saville's house style: a black
-field, a hairline grid, engraved condensed capitals, everything catalogued and
-numbered, and colour used as an *encoding system* rather than decoration —
-the Blue Monday floppy-disk colour code, where a row of coloured blocks spells
-something to anyone who learns the key.
+**The System.** The status overlay from *Solo Leveling*: a near-black field
+with a blue cast, terminal monospace throughout, thin bright rules bracketing
+every heading, values stated in brackets, and one electric blue marking what is
+live. The window is lit from inside — that is a halo, not a shadow, and it is
+the only lighting effect this design has.
 
-That last part is why this world was chosen over a literal fantasy dashboard.
-A habit tracker is fundamentally a **log of small verified events**, and a
-catalogue is the visual language humans invented for exactly that.
+The world changed once before, from Factory Records catalogue sleeves. What
+survived the move is everything that was actually load-bearing: the code strip,
+inversion as completion, and colour used as an *encoding system* rather than
+decoration. Those were never Saville's — they are what a **log of small verified
+events** needs, and they fit a status window as well as they fit a record sleeve.
 
 ### How the RPG words live here
 
-The vocabulary is binding — XP, levels, quests, badges — and the catalogue
-makes them native rather than bolted on:
+The vocabulary is binding — XP, levels, quests, badges — and the System makes
+them native rather than bolted on, because it is the same fiction:
 
-- A habit is a **catalogued item**. It carries a **quest number** (`Q07`),
-  derived from its position in the list, set in mono beside the name.
-- **XP** is a pressing count. **Levels** are a graduated tick scale, read like
-  an instrument, not a bubbly bar.
-- **Badges** are catalogue entries: numbered, titled, either pressed or not.
+- A habit is a **quest**. It carries a **quest number** (`Q07`), derived from
+  its position in the list, set beside the name.
+- The day states its progress the way the System does: **`[ 2 / 5 ]`**, with a
+  **CAUTION** line beneath while anything is open.
+- **XP** is a banked count. **Levels** are a graduated tick scale, read like an
+  instrument, not a bubbly bar.
+- **STATUS** is the character sheet: level, JOB, TITLE and one stat per
+  category, every number derived from real completions.
 - A **streak** is an unbroken run of blocks in the code strip.
+
+**What the System does not get is teeth.** The source material punishes a failed
+daily quest. This app does not: XP is never taken back, and the caution line
+states what is left rather than threatening a consequence the app then declines
+to carry out. See `domain/xp.js` for why — losing levels over one bad night is
+how a habit tracker gets deleted rather than reopened.
 
 ### The three signature devices
 
@@ -158,9 +181,9 @@ a world.
    even ridges. Filled with the ground colour so the ridges genuinely hide
    what is behind them.
 3. **Inversion as completion.** A finished habit does not gain a green tick;
-   the whole row **flips to PULSE ground with VOID text**. It is the strongest
-   done/not-done signal available at 7am with one eye open, and it is the
-   board's own active state.
+   the whole row **flips to GLASS ground with VOID text**. It is the strongest
+   done/not-done signal available at 7am with one eye open, and it is what a
+   System window does when a goal is met.
 
 ## Rules
 
@@ -168,15 +191,24 @@ a world.
 style object is px, and px text cannot be scaled by the user. If a size you
 need isn't on the ramp, the answer is the nearest step, not a new one.
 
-**Two faces, and they do not trade jobs.**
-`Archivo Variable` is structure and language: screen titles (condensed 78%,
-uppercase, opened up), habit names, body copy, buttons.
-`JetBrains Mono Variable` is measurement: quest numbers, times, doses, XP,
-streak counts, section labels, meta rows, plot ticks.
-**Habit names are set in Archivo at normal width and sentence case**, not in
-tracked-out mono capitals. The world would happily set everything as a code;
-this app is read at 7am by someone half awake, and a name has to be legible
-before it is stylish. That is the one place the world yields, deliberately.
+**Mono is the interface; Archivo is only prose.**
+`JetBrains Mono Variable` sets screen titles, section labels, habit names, quest
+numbers, times, doses, XP, streak counts, meta rows and plot ticks — everything
+that is a name, a label or a number. `Archivo Variable` is left with actual
+sentences: empty-state hints, the Settings explanations, the first-run intro.
+Archivo's condensed width axis is no longer used anywhere.
+
+**Habit names are mono at sentence case with normal tracking.** The rule this
+replaces said names must not be "tracked-out mono capitals", and that is still
+true — what made a name hard to read was the tracking and the caps, not the
+face. JetBrains Mono at 15px sentence case is legible at 7am, which is the only
+test that matters here.
+
+**Glow is display type only**, via `.glow`, plus `.glow-edge` for a panel edge
+that is genuinely live. Never body copy, never a meta row, never anything below
+`--fs-base`. A halo on a paragraph is the fastest way to make a screen
+unreadable. Both utilities resolve to `none` in daylight, because a glow on
+paper reads as a printing fault rather than as power.
 
 **Containers round; data stays geometric.** This is the load-bearing rule of
 the softened world, and it is what stops "rounded" turning into "generic".
@@ -199,7 +231,7 @@ nothing more. Nested filled boxes are still wrong; a panel holds records, not
 more panels.
 
 The tab bar floats: a pill of `--panel` in a transparent dock, with the active
-cell a pill of PULSE. The dock is `pointer-events: none` so the strip of
+cell a pill of GLASS. The dock is `pointer-events: none` so the strip of
 content either side of it is not a dead band.
 
 **48dp is the floor for anything tappable.** Enforced globally in `global.css`
@@ -221,7 +253,7 @@ repaints, and the pulsar plot has up to 90 points doing it at once.
 
 **One authored moment per event, and it fires only on the real thing.**
 Completing a habit sweeps the row. Reaching a level, or earning a badge,
-presents a catalogue card. Nothing else moves — nothing animates on mount, on
+presents a System card. Nothing else moves — nothing animates on mount, on
 scroll, or because a screen appeared. A habit tracker opened twice a day cannot
 afford an entrance, and an animation that plays when you *undo* something is
 telling you a lie about what happened, so un-completing is silent.
@@ -267,7 +299,7 @@ Two judgement calls that are not detector rules:
 ## Platform truth
 
 - **Dark is canonical**, and it is picked from the use scene — a phone, in
-  bed, at either end of the day — not from the category. The PULSE-ground light
+  bed, at either end of the day — not from the category. The DAYLIGHT-ground light
   theme is the same grammar for daylight, not a second design.
 - **Reminders exist on Android only.** iOS Safari has no scheduled local
   notification API and Web Push needs a server, which contradicts offline-only.
