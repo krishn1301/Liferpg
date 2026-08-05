@@ -70,6 +70,8 @@ A one-time import exists for the Electron desktop predecessor's save file
 - **Reminders**, per habit with their own times. Derived like everything else:
   `isDueOn` decides what is scheduled, so a reminder can never disagree with the
   Today list, and a habit already ticked off goes quiet for the rest of the day.
+  Verified end to end on a Galaxy S9+ on 2026-08-05 — scheduled, fired, and
+  posted with the right icon and text. See TESTING.md.
 - **The daily log** — mood, energy, water and a note per day. Optional by
   design: a day nobody logged is absent, never zero, so ignoring it for a
   fortnight cannot make that fortnight read as the worst on record.
