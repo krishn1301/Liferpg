@@ -90,6 +90,17 @@ function normalizeBlock(block) {
 const sortBlocks = (blocks) =>
   [...blocks].sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end))
 
+/**
+ * Habits that count against the cap.
+ *
+ * Archived ones do not. They are history the user chose to keep, and forcing
+ * someone to destroy an old habit's completions before adding a new one is
+ * exactly the trade Archive exists to avoid. The Habits screen counts the same
+ * way, and these two disagreeing would show an enabled Add button that silently
+ * did nothing.
+ */
+const liveCount = (doc) => (doc.habits ?? []).filter((h) => !h.archived).length
+
 /** Ids only need to be unique within one device's document. */
 export function newId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -101,7 +112,7 @@ export function reducer(doc, action) {
       return migrate(action.doc)
 
     case 'habit/add': {
-      if (doc.habits.length >= MAX_HABITS) return doc
+      if (liveCount(doc) >= MAX_HABITS) return doc
       return {
         ...doc,
         habits: [
@@ -199,7 +210,7 @@ export function reducer(doc, action) {
         habits: [
           ...doc.habits,
           ...action.habits
-            .slice(0, Math.max(0, MAX_HABITS - doc.habits.length))
+            .slice(0, Math.max(0, MAX_HABITS - liveCount(doc)))
             .map((h) =>
               normalizeHabit({ id: newId(), createdKey: action.todayKey ?? todayKey(), ...h })
             )

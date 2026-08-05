@@ -16,6 +16,7 @@ import More from './screens/More'
 import Calendar from './screens/Calendar'
 import Medicines from './screens/Medicines'
 import Settings from './screens/Settings'
+import Welcome from './screens/Welcome'
 import Placeholder from './screens/Placeholder'
 
 export default function App() {
@@ -52,6 +53,18 @@ function Shell() {
       <div style={S.splash}>
         <div style={S.wordmark}>LifeRPG</div>
       </div>
+    )
+  }
+
+  // First run only, and only for a genuinely empty document. `onboarded` is set
+  // by finishing *or* skipping, so this never reappears — and the habit check
+  // means anyone restoring a backup goes straight to their data instead of
+  // being asked to pick a starter pack they do not need.
+  if (!doc.settings.onboarded && doc.habits.length === 0) {
+    return (
+      <main>
+        <Welcome />
+      </main>
     )
   }
 

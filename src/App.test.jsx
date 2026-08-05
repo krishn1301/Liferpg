@@ -61,6 +61,25 @@ const click = async (el) =>
   act(async () => el.dispatchEvent(new MouseEvent('click', { bubbles: true })))
 
 /**
+ * An empty document that has already been through first run.
+ *
+ * Without this every test would land on the Welcome screen, which is correct
+ * behaviour and not what these tests are about. First run has its own describe
+ * at the bottom.
+ */
+const skipOnboarding = () =>
+  store.set(
+    'liferpg.doc.v1',
+    JSON.stringify({
+      habits: [],
+      medicines: [],
+      routineBlocks: [],
+      dailyLogs: {},
+      settings: { theme: 'dark', onboarded: true }
+    })
+  )
+
+/**
  * Wait for the UI to say something.
  *
  * The file-import flow goes through `FileReader`, which resolves on its own
@@ -86,6 +105,7 @@ const setFiles = (input, file) =>
 describe('App', () => {
   beforeEach(() => {
     store.clear()
+    skipOnboarding()
     window.location.hash = ''
   })
 
@@ -151,7 +171,10 @@ describe('App', () => {
 // the exact failure the tests above exist to prevent, and a new screen only
 // reachable behind two taps is easy to ship broken.
 describe('every route renders', () => {
-  beforeEach(() => store.clear())
+  beforeEach(() => {
+    store.clear()
+    skipOnboarding()
+  })
 
   const routes = [
     ['#/', 'Good'],
@@ -241,6 +264,81 @@ describe('reward moments', () => {
 
     expect(container.textContent).not.toContain('Level reached')
     expect(container.textContent).not.toContain('Badge earned')
+    unmount()
+  })
+})
+
+// First run is the only screen a new tester is guaranteed to see, and the one
+// place the app has to get someone from nothing to something.
+describe('first run', () => {
+  beforeEach(() => {
+    store.clear()
+    window.location.hash = ''
+  })
+
+  it('offers starter packs instead of an empty app', async () => {
+    const { container, unmount } = await render()
+    expect(container.textContent).toContain('Pick a starting point')
+    // No tab bar yet — there is nothing to navigate between.
+    expect(container.querySelector('nav')).toBeNull()
+    unmount()
+  })
+
+  it('creates the pack and never asks again', async () => {
+    const first = await render()
+
+    await click(
+      [...first.container.querySelectorAll('button')].find((b) =>
+        b.textContent.includes('Just getting started')
+      )
+    )
+    // The habits are named before anything is created.
+    expect(first.container.textContent).toContain('Drink water')
+
+    await click(
+      [...first.container.querySelectorAll('button')].find(
+        (b) => b.textContent === 'Start with these'
+      )
+    )
+    expect(first.container.textContent).toContain('Drink water')
+    expect(first.container.textContent).toMatch(/Good (morning|afternoon|evening)/)
+    first.unmount()
+
+    const second = await render()
+    expect(second.container.textContent).not.toContain('Pick a starting point')
+    second.unmount()
+  })
+
+  it('takes no for an answer', async () => {
+    const first = await render()
+    await click(
+      [...first.container.querySelectorAll('button')].find((b) => b.textContent.startsWith('Skip'))
+    )
+    expect(first.container.textContent).toContain('No habits yet')
+    first.unmount()
+
+    // Skipping still counts as answering — it must not reappear next launch.
+    const second = await render()
+    expect(second.container.textContent).not.toContain('Pick a starting point')
+    second.unmount()
+  })
+
+  it('does not interrupt someone restoring a backup', async () => {
+    // A restored document has habits but no `onboarded` flag, and being asked
+    // to pick a starter pack on top of real data would be alarming.
+    store.set(
+      'liferpg.doc.v1',
+      JSON.stringify({
+        habits: [{ id: 'h1', name: 'Tuition', schedule: { type: 'daily' }, completions: {} }],
+        medicines: [],
+        routineBlocks: [],
+        dailyLogs: {},
+        settings: { theme: 'dark' }
+      })
+    )
+    const { container, unmount } = await render()
+    expect(container.textContent).not.toContain('Pick a starting point')
+    expect(container.textContent).toContain('Tuition')
     unmount()
   })
 })
@@ -374,7 +472,10 @@ describe('vows and the relapse flow', () => {
 })
 
 describe('importing a desktop save through the real UI', () => {
-  beforeEach(() => store.clear())
+  beforeEach(() => {
+    store.clear()
+    skipOnboarding()
+  })
 
   const DESKTOP_SAVE = JSON.stringify({
     habits: [

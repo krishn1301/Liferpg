@@ -27,6 +27,10 @@ export function stripDays(habit, todayKey, n = 7) {
   return Array.from({ length: n }, (_, i) => {
     const key = addDays(todayKey, i - (n - 1))
     if (habit?.completions?.[key]) return { key, state: 'done' }
+    // A deliberate skip is not a miss. Streaks already treat it as neither
+    // credit nor penalty; the strip has to say the same thing or the two
+    // disagree about the same day.
+    if (habit?.skips?.[key]) return { key, state: 'skip' }
     if (flexible || !isDueOn(habit, key)) return { key, state: 'off' }
     return { key, state: 'missed' }
   })
@@ -55,9 +59,10 @@ export function vowStripDays(habit, todayKey, n = 7) {
 /**
  * The code strip. A run of blocks reading left→right over recent days:
  *
- *   solid block   done
+ *   solid block    done
  *   hollow outline missed
- *   centre dot    not scheduled
+ *   centre bar     skipped on purpose
+ *   centre dot     not scheduled
  *
  * State is carried by *shape* first and hue second, so the strip survives
  * colour blindness, a greyscale screenshot, and the light theme. Colour says
@@ -74,11 +79,13 @@ export function vowStripDays(habit, todayKey, n = 7) {
 export function CodeStrip({ days, color, size = 11, gap = 3, label }) {
   const done = days.filter((d) => d.state === 'done').length
   const missed = days.filter((d) => d.state === 'missed').length
-  const off = days.length - done - missed
+  const skipped = days.filter((d) => d.state === 'skip').length
+  const off = days.length - done - missed - skipped
 
   const summary =
     label ??
     `Last ${days.length} days: ${done} done, ${missed} missed` +
+      (skipped ? `, ${skipped} skipped` : '') +
       (off ? `, ${off} not scheduled` : '')
 
   return (
@@ -96,7 +103,11 @@ export function CodeStrip({ days, color, size = 11, gap = 3, label }) {
               position: 'relative',
               background: d.state === 'done' ? fill : 'transparent',
               border: `1px solid ${
-                d.state === 'done' ? fill : d.state === 'missed' ? 'var(--border)' : 'var(--rule)'
+                d.state === 'done'
+                  ? fill
+                  : d.state === 'missed' || d.state === 'skip'
+                    ? 'var(--border)'
+                    : 'var(--rule)'
               }`
             }}
           >
@@ -107,6 +118,21 @@ export function CodeStrip({ days, color, size = 11, gap = 3, label }) {
                   inset: 0,
                   margin: 'auto',
                   width: 2,
+                  height: 2,
+                  background: 'var(--textMuted)'
+                }}
+              />
+            )}
+            {/* A bar, not a dot: "I crossed this day out" rather than "nothing
+                was asked of me". Shape carries the difference, as everywhere
+                else in the strip — see DESIGN.md. */}
+            {d.state === 'skip' && (
+              <span
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  margin: 'auto',
+                  width: Math.max(4, size - 6),
                   height: 2,
                   background: 'var(--textMuted)'
                 }}

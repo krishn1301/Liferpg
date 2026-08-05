@@ -48,6 +48,31 @@ describe('stripDays', () => {
     ])
   })
 
+  it('marks a deliberate skip as its own state, not a miss', () => {
+    // currentStreak already treats a skip as neither credit nor penalty. If the
+    // strip painted it hollow like a miss, the picture and the number would be
+    // telling the user two different things about the same day.
+    const habit = {
+      schedule: { type: 'daily' },
+      completions: { '2026-07-30': true },
+      skips: { '2026-07-28': true }
+    }
+
+    const strip = stripDays(habit, TODAY)
+
+    expect(strip.find((d) => d.key === '2026-07-28').state).toBe('skip')
+    expect(strip.find((d) => d.key === '2026-07-29').state).toBe('missed')
+  })
+
+  it('lets a completion win over a skip on the same day', () => {
+    const habit = {
+      schedule: { type: 'daily' },
+      completions: { [TODAY]: true },
+      skips: { [TODAY]: true }
+    }
+    expect(stripDays(habit, TODAY).at(-1).state).toBe('done')
+  })
+
   it('never shows a miss for an "n times a week" habit', () => {
     // `isDueOn` says yes every day for a weekly habit — you *may* do it any
     // day — so a naive strip paints four misses a week for someone hitting

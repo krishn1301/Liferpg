@@ -3,7 +3,7 @@ import { useStore } from '../state/StoreProvider'
 import { useToday } from '../state/useToday'
 import { addMonths, fromDateKey, leadingBlanks, monthKeys } from '../domain/dates'
 import { dailyTrend } from '../domain/stats'
-import { activeHabits, dueToday } from '../domain/streaks'
+import { activeHabits, scheduledOn } from '../domain/streaks'
 import { isVow } from '../domain/quit'
 import { categoryOf } from '../domain/constants'
 import { describeSchedule } from '../domain/schedule'
@@ -105,7 +105,9 @@ export default function Calendar() {
       {selected && (
         <DaySheet
           dateKey={selected}
-          habits={dueToday(doc.habits, selected)}
+          // Not `dueToday`: that hides a skipped habit, which would make the row
+          // disappear the moment Skip was pressed and leave no way to undo it.
+          habits={scheduledOn(doc.habits, selected)}
           slips={slips.get(selected)}
           dailyLogs={doc.dailyLogs}
           onSetLog={(field, value) =>
@@ -115,6 +117,10 @@ export default function Calendar() {
           onToggle={(habit) => {
             tap(habit.completions?.[selected] ? 'light' : 'medium')
             dispatch({ type: 'habit/toggle', id: habit.id, dateKey: selected })
+          }}
+          onSkip={(habit) => {
+            tap('light')
+            dispatch({ type: 'habit/skip', id: habit.id, dateKey: selected })
           }}
           onClose={() => setSelected(null)}
         />
@@ -192,7 +198,17 @@ function Legend() {
   )
 }
 
-function DaySheet({ dateKey, habits, slips, dailyLogs, onSetLog, isFuture, onToggle, onClose }) {
+function DaySheet({
+  dateKey,
+  habits,
+  slips,
+  dailyLogs,
+  onSetLog,
+  isFuture,
+  onToggle,
+  onSkip,
+  onClose
+}) {
   const label = fromDateKey(dateKey).toLocaleDateString(undefined, {
     weekday: 'long',
     day: 'numeric',
@@ -235,6 +251,7 @@ function DaySheet({ dateKey, habits, slips, dailyLogs, onSetLog, isFuture, onTog
               habit={habit}
               dateKey={dateKey}
               onToggle={() => onToggle(habit)}
+              onSkip={() => onSkip(habit)}
             />
           ))}
         </div>
@@ -255,34 +272,58 @@ function DaySheet({ dateKey, habits, slips, dailyLogs, onSetLog, isFuture, onTog
   )
 }
 
-function DayRow({ habit, dateKey, onToggle, disabled }) {
+/**
+ * One habit on one day: tick it, or cross the day out.
+ *
+ * A row rather than a single button, because Skip needs its own control and a
+ * button cannot legally contain another one. Skip is hidden once the habit is
+ * done — a completion already supersedes a skip in the reducer, so offering it
+ * would be a control that undoes itself.
+ */
+function DayRow({ habit, dateKey, onToggle, onSkip, disabled }) {
   const cat = categoryOf(habit.category)
   const done = Boolean(habit.completions?.[dateKey])
+  const skipped = Boolean(habit.skips?.[dateKey])
 
   return (
-    <button
-      onClick={onToggle}
-      disabled={disabled}
-      aria-pressed={done}
-      style={{ ...S.dayRow, ...(done ? S.dayRowDone : null) }}
-    >
-      <span style={{ fontSize: 'var(--fs-xl)' }}>{habit.icon ?? '⭐'}</span>
-      <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-        <div style={S.dayName}>{habit.name}</div>
-        <div style={S.dayMeta}>
-          {cat.label} · {describeSchedule(habit.schedule)}
-        </div>
-      </div>
-      <span
-        style={{
-          ...S.check,
-          borderColor: done ? 'currentColor' : 'var(--border)',
-          color: done ? 'currentColor' : 'transparent'
-        }}
+    <div style={{ ...S.dayRow, ...(done ? S.dayRowDone : null) }}>
+      <button
+        onClick={onToggle}
+        disabled={disabled}
+        aria-pressed={done}
+        aria-label={done ? `Mark ${habit.name} not done` : `Mark ${habit.name} done`}
+        style={S.dayMain}
       >
-        ✓
-      </span>
-    </button>
+        <span style={{ fontSize: 'var(--fs-xl)' }}>{habit.icon ?? '⭐'}</span>
+        <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+          <div style={S.dayName}>{habit.name}</div>
+          <div style={S.dayMeta}>
+            {skipped
+              ? 'Skipped — streak safe'
+              : `${cat.label} · ${describeSchedule(habit.schedule)}`}
+          </div>
+        </div>
+        <span
+          style={{
+            ...S.check,
+            borderColor: done ? 'currentColor' : 'var(--border)',
+            color: done ? 'currentColor' : 'transparent'
+          }}
+        >
+          ✓
+        </span>
+      </button>
+
+      {!done && !disabled && (
+        <button
+          onClick={onSkip}
+          aria-pressed={skipped}
+          style={{ ...S.skip, ...(skipped ? S.skipOn : null) }}
+        >
+          {skipped ? 'Skipped' : 'Skip'}
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -396,6 +437,33 @@ const S = {
     width: '100%'
   },
   dayRowDone: { background: 'var(--text)', color: 'var(--onInk)', borderColor: 'var(--text)' },
+  dayMain: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    minWidth: 0,
+    padding: 0,
+    background: 'transparent',
+    color: 'inherit'
+  },
+  skip: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    fontWeight: 600,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: 'var(--textMuted)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-pill)',
+    padding: '0 12px',
+    // Under the 48dp floor: it sits beside a full-size target inside a sheet,
+    // and two 48px controls per row push the list below the keyboard.
+    minHeight: 34,
+    minWidth: 0,
+    flexShrink: 0
+  },
+  skipOn: { borderColor: 'var(--text)', color: 'var(--text)' },
   dayName: { fontSize: 'var(--fs-base)', fontWeight: 600 },
   dayMeta: {
     fontFamily: 'var(--font-mono)',
