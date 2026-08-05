@@ -45,7 +45,9 @@ export default function More() {
             {earned} of {badges.length} badges
           </Data>
         </div>
-        <div style={S.heroLevel}>{String(level.level).padStart(2, '0')}</div>
+        <div className="glow" style={S.heroLevel}>
+          {String(level.level).padStart(2, '0')}
+        </div>
         <TickScale
           value={level.current / level.needed}
           label={`Level ${level.level}, ${level.current} of ${level.needed} XP to level ${level.level + 1}`}
@@ -111,6 +113,7 @@ const S = {
     color: 'var(--textDim)'
   },
   heroLevel: {
+    fontFamily: 'var(--font-mono)',
     fontSize: 'var(--fs-3xl)',
     fontWeight: 800,
     fontStretch: '78%',

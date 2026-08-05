@@ -129,7 +129,7 @@ const S = {
     padding: '11px 0',
     borderBottom: '1px solid var(--rule)'
   },
-  packHabit: { flex: 1, minWidth: 0, fontSize: 'var(--fs-md)' },
+  packHabit: { flex: 1, minWidth: 0, fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-md)' },
   packMeta: {
     fontSize: 'var(--fs-3xs)',
     letterSpacing: '0.1em',

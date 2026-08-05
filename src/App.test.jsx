@@ -161,8 +161,11 @@ describe('App', () => {
     await click(checkbox)
     expect(second.container.textContent).toContain('10 XP')
     // The day's code strip replaced the completion percentage: one block per
-    // habit due today, with the count spelled out beside it.
-    expect(second.container.textContent).toContain('1 / 1 done')
+    // habit due today, with the count bracketed beside it the way the System
+    // window states a goal.
+    expect(second.container.textContent).toContain('[ 1 / 1 ]')
+    // Nothing left, so no caution line.
+    expect(second.container.textContent).not.toContain('unfinished')
     second.unmount()
   })
 })
