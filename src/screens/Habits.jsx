@@ -9,6 +9,7 @@ import { canRemind, isIOS } from '../platform/device'
 import { requestReminderPermission } from '../platform/reminders'
 import {
   Screen,
+  Overline,
   Button,
   Sheet,
   Field,
@@ -51,19 +52,23 @@ export default function Habits() {
     setEditing(null)
   }
 
-  const atCap = doc.habits.length >= MAX_HABITS
+  const live = doc.habits.filter((h) => !h.archived)
+  const archived = doc.habits.filter((h) => h.archived)
+  // The cap counts what is live. An archived habit costs nothing to keep and
+  // making someone delete history to add a new habit is the wrong trade.
+  const atCap = live.length >= MAX_HABITS
 
   return (
     <Screen
       title="Habits"
-      subtitle={`${doc.habits.length} of ${MAX_HABITS} catalogued`}
+      subtitle={`${live.length} of ${MAX_HABITS} catalogued`}
       action={
         <Button onClick={() => setEditing({ ...BLANK })} disabled={atCap}>
           + Add
         </Button>
       }
     >
-      {doc.habits.length === 0 ? (
+      {live.length === 0 ? (
         <EmptyState
           title="No habits yet"
           hint="Start with one you can actually do tomorrow."
@@ -71,7 +76,7 @@ export default function Habits() {
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {doc.habits.map((habit, i) => {
+          {live.map((habit, i) => {
             const cat = categoryOf(habit.category)
             const vow = isVow(habit)
             return (
@@ -102,6 +107,33 @@ export default function Habits() {
 
       {atCap && <p style={S.capNote}>You&apos;ve reached the {MAX_HABITS} habit limit.</p>}
 
+      {/* Archived habits keep every completion they ever had — they are out of
+          Today and out of every rate, not gone. Listed quietly at the bottom so
+          the shelf is visible without competing with what you actually track. */}
+      {archived.length > 0 && (
+        <>
+          <Overline>Archived</Overline>
+          <div style={S.archivedList}>
+            {archived.map((habit) => (
+              <div key={habit.id} style={S.archivedRow}>
+                <span style={{ fontSize: 'var(--fs-md)' }}>{habit.icon}</span>
+                <span style={S.archivedName}>{habit.name}</span>
+                <button
+                  onClick={() =>
+                    dispatch({ type: 'habit/update', id: habit.id, changes: { archived: false } })
+                  }
+                  style={S.unarchive}
+                  disabled={atCap}
+                >
+                  Restore
+                </button>
+              </div>
+            ))}
+          </div>
+          {atCap && <p style={S.capNote}>Archive or delete a live habit before restoring one.</p>}
+        </>
+      )}
+
       {editing && (
         <HabitSheet
           // Remounting on identity change is what resets the draft. Deriving it
@@ -113,6 +145,14 @@ export default function Habits() {
           onClose={() => setEditing(null)}
           onSave={save}
           onUnrelapse={(dateKey) => dispatch({ type: 'habit/unrelapse', id: editing.id, dateKey })}
+          onArchive={
+            editing.id
+              ? () => {
+                  dispatch({ type: 'habit/update', id: editing.id, changes: { archived: true } })
+                  setEditing(null)
+                }
+              : null
+          }
           onDelete={
             editing.id
               ? () => {
@@ -127,7 +167,7 @@ export default function Habits() {
   )
 }
 
-function HabitSheet({ draft, today, onClose, onSave, onUnrelapse, onDelete }) {
+function HabitSheet({ draft, today, onClose, onSave, onUnrelapse, onArchive, onDelete }) {
   const [local, setLocal] = useState(draft)
   const set = (changes) => setLocal((p) => ({ ...p, ...changes }))
   const schedule = local.schedule ?? { type: 'daily' }
@@ -152,9 +192,12 @@ function HabitSheet({ draft, today, onClose, onSave, onUnrelapse, onDelete }) {
           <Button onClick={() => onSave(local)} disabled={!local.name.trim()} style={{ flex: 1 }}>
             {local.id ? 'Save' : vow ? 'Add vow' : 'Add habit'}
           </Button>
-          {onDelete && (
-            <Button variant="danger" onClick={onDelete}>
-              Delete
+          {/* Archive is the one in the footer now, because it is almost always
+              what someone actually wants: stop tracking this, keep what it
+              earned. Delete moved into the body — see below. */}
+          {onArchive && (
+            <Button variant="ghost" onClick={onArchive}>
+              Archive
             </Button>
           )}
         </>
@@ -233,7 +276,44 @@ function HabitSheet({ draft, today, onClose, onSave, onUnrelapse, onDelete }) {
           />
         </>
       )}
+
+      {onDelete && <DangerZone vow={vow} onDelete={onDelete} />}
     </Sheet>
+  )
+}
+
+/**
+ * Deleting is separated from archiving on purpose.
+ *
+ * Both used to be one red button in the footer, so the only way to stop
+ * tracking something was to destroy every completion it ever earned. Archive
+ * now sits in the footer and this is the deliberate act: down the bottom, past
+ * everything else, saying in words what it costs.
+ */
+function DangerZone({ vow, onDelete }) {
+  const [armed, setArmed] = useState(false)
+
+  return (
+    <div style={S.danger}>
+      <p style={S.dangerNote}>
+        Archiving keeps {vow ? 'every clean day and relapse' : 'every completion'} and takes this
+        out of Today and out of your stats. Deleting destroys that history and cannot be undone.
+      </p>
+      {armed ? (
+        <div style={S.dangerRow}>
+          <Button variant="danger" onClick={onDelete} style={{ flex: 1 }}>
+            Yes, delete it
+          </Button>
+          <Button variant="ghost" onClick={() => setArmed(false)}>
+            Keep
+          </Button>
+        </div>
+      ) : (
+        <button onClick={() => setArmed(true)} style={S.dangerLink}>
+          Delete permanently
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -487,6 +567,54 @@ const S = {
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius-sm)',
     background: 'var(--input)'
+  },
+  archivedList: { display: 'flex', flexDirection: 'column' },
+  archivedRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '10px 0',
+    borderTop: '1px solid var(--rule)'
+  },
+  archivedName: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 'var(--fs-md)',
+    color: 'var(--textDim)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  },
+  unarchive: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    fontWeight: 600,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    color: 'var(--textDim)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-pill)',
+    padding: '0 14px',
+    minHeight: 36,
+    flexShrink: 0
+  },
+  danger: { marginTop: 28, paddingTop: 16, borderTop: '1px solid var(--rule)' },
+  dangerNote: {
+    fontSize: 'var(--fs-md)',
+    color: 'var(--textDim)',
+    lineHeight: 1.6,
+    marginBottom: 12
+  },
+  dangerRow: { display: 'flex', gap: 8 },
+  dangerLink: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    fontWeight: 600,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    color: 'var(--danger)',
+    padding: 0,
+    minHeight: 'auto'
   },
   remindRow: { display: 'flex', gap: 8, alignItems: 'stretch' },
   timePills: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 },

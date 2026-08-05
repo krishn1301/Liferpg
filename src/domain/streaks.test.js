@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { currentStreak, completionRate, dueToday, FREEZES_PER_MONTH } from './streaks'
+import { currentStreak, completionRate, dueToday, scheduledOn, FREEZES_PER_MONTH } from './streaks'
 import { isDueOn, describeSchedule, normalizeSchedule } from './schedule'
 
 // 2026-07-27 is a Monday. Every fixture below is anchored to it.
@@ -219,5 +219,32 @@ describe('describeSchedule', () => {
 
   it('lists days Monday-first, matching the rest of the UI', () => {
     expect(describeSchedule({ type: 'weekdays', days: [0, 1] })).toBe('Mon, Sun')
+  })
+})
+
+// Skipping a day must not make the habit unreachable. `dueToday` hides it on
+// purpose — the decision is already made — but the Calendar's day sheet needs
+// it present so the skip can be taken back.
+describe('scheduledOn', () => {
+  const THU = '2026-07-30'
+  const skipped = habit({
+    schedule: { type: 'daily' },
+    skips: { [THU]: true }
+  })
+
+  it('keeps a skipped habit visible, where dueToday drops it', () => {
+    expect(scheduledOn([skipped], THU)).toHaveLength(1)
+    expect(dueToday([skipped], THU)).toHaveLength(0)
+  })
+
+  it('still drops archived habits', () => {
+    expect(scheduledOn([habit({ schedule: { type: 'daily' }, archived: true })], THU)).toHaveLength(
+      0
+    )
+  })
+
+  it('still respects the schedule', () => {
+    const mwf = habit({ schedule: { type: 'weekdays', days: [1, 3, 5] } })
+    expect(scheduledOn([mwf], THU)).toHaveLength(0)
   })
 })

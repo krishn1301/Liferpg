@@ -154,13 +154,16 @@ export function completionRate(habit, fromKey, toKey) {
 export const activeHabits = (habits) => (habits ?? []).filter((h) => !h.archived)
 
 /**
- * Habits that should appear on a given day: scheduled, not skipped, and — for
- * weekly habits — not already finished for the week.
+ * Habits a day actually asked for: scheduled, live, and — for weekly habits —
+ * not already finished for the week. **Skipped days are still included.**
+ *
+ * This is what the Calendar's day sheet lists, and the distinction is not
+ * academic: `dueToday` hides a skipped habit, so a sheet built on it made the
+ * row vanish the instant Skip was pressed and left no way to take it back.
  */
-export function dueToday(habits, dateKey) {
+export function scheduledOn(habits, dateKey) {
   return habits.filter((habit) => {
     if (!isDueOn(habit, dateKey)) return false
-    if (habit.skips?.[dateKey]) return false
     if (habit.archived) return false
 
     const schedule = normalizeSchedule(habit.schedule)
@@ -172,3 +175,11 @@ export function dueToday(habits, dateKey) {
     return true
   })
 }
+
+/**
+ * Habits that should appear on a given day's list: everything `scheduledOn`
+ * returns, minus the ones deliberately skipped. A skip is a decision already
+ * made, so Today has nothing left to ask about.
+ */
+export const dueToday = (habits, dateKey) =>
+  scheduledOn(habits, dateKey).filter((habit) => !habit.skips?.[dateKey])

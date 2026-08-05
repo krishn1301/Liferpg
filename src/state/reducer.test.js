@@ -85,6 +85,50 @@ describe('habit/add', () => {
   })
 })
 
+describe('archiving', () => {
+  it('keeps the habit and everything it earned', () => {
+    let doc = withHabit()
+    const id = doc.habits[0].id
+    doc = reducer(doc, { type: 'habit/toggle', id, dateKey: MON })
+
+    const archived = reducer(doc, { type: 'habit/update', id, changes: { archived: true } })
+
+    expect(archived.habits).toHaveLength(1)
+    // The whole point: stop tracking it without destroying the history.
+    expect(archived.habits[0].completions[MON]).toBe(true)
+    expect(archived.habits[0].archived).toBe(true)
+  })
+
+  it('restores cleanly', () => {
+    let doc = withHabit()
+    const id = doc.habits[0].id
+    doc = reducer(doc, { type: 'habit/update', id, changes: { archived: true } })
+    doc = reducer(doc, { type: 'habit/update', id, changes: { archived: false } })
+    expect(doc.habits[0].archived).toBe(false)
+  })
+
+  it('does not count against the habit cap', () => {
+    // Otherwise someone has to delete history to make room, which is the exact
+    // trade archiving exists to avoid. The Habits screen counts the same way,
+    // and a mismatch would show an enabled Add button that silently did nothing.
+    let doc = emptyDoc()
+    for (let i = 0; i < MAX_HABITS; i++) {
+      doc = reducer(doc, { type: 'habit/add', habit: { name: `H${i}` } })
+    }
+    expect(doc.habits).toHaveLength(MAX_HABITS)
+
+    doc = reducer(doc, {
+      type: 'habit/update',
+      id: doc.habits[0].id,
+      changes: { archived: true }
+    })
+    doc = reducer(doc, { type: 'habit/add', habit: { name: 'One more' } })
+
+    expect(doc.habits).toHaveLength(MAX_HABITS + 1)
+    expect(doc.habits.filter((h) => !h.archived)).toHaveLength(MAX_HABITS)
+  })
+})
+
 describe('habit/relapse and habit/unrelapse', () => {
   const withVows = () => {
     let doc = reducer(emptyDoc(), {
