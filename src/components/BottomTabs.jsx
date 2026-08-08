@@ -68,7 +68,7 @@ const S = {
     right: 0,
     bottom: 0,
     zIndex: 30,
-    padding: `0 12px calc(var(--safe-bottom) + 10px)`,
+    padding: `0 12px calc(var(--safe-bottom) + var(--dock-gutter))`,
     pointerEvents: 'none'
   },
   bar: {

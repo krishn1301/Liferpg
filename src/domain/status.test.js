@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { statBlock, title, status, STAT_FLOOR } from './status'
+import { statBlock, status, STAT_FLOOR } from './status'
 import { CATEGORIES } from './constants'
 
 const TODAY = '2026-07-31'
@@ -83,40 +83,25 @@ describe('statBlock', () => {
   })
 })
 
-describe('title', () => {
-  it('names the strongest category', () => {
-    const block = statBlock(
-      [
-        habit({ id: 'a', category: 'fitness', completions: completions(3) }),
-        habit({ id: 'b', category: 'education', completions: completions(9) })
-      ],
-      TODAY
-    )
-    expect(title(block)).toBe('Education')
+describe('status', () => {
+  it('bundles the block and the title, and no longer a job', () => {
+    const s = status([habit({ completions: completions(5) })], TODAY)
+    expect(s.block).toHaveLength(8)
+    expect(s).not.toHaveProperty('job')
   })
 
   it('is honest when nothing has been earned', () => {
-    // Not "Fitness" just for being first in the list.
-    expect(title(statBlock([], TODAY))).toBe('Unranked')
+    // Not a flattering placeholder, and not "Fitness" for being first in the
+    // category list — which is what the title used to be.
+    expect(status([], TODAY).title).toBe('Unranked')
   })
 
-  it('breaks ties alphabetically, not by declaration order', () => {
-    const block = statBlock(
-      [
-        habit({ id: 'a', category: 'fitness', completions: completions(5) }),
-        habit({ id: 'b', category: 'education', completions: completions(5) })
-      ],
-      TODAY
+  it('titles from badges rather than from the strongest category', () => {
+    // Five habits earns Habit Master. The old title would have said "Fitness"
+    // here, which is a category name doing duty as an achievement.
+    const habits = Array.from({ length: 5 }, (_, i) =>
+      habit({ id: `h${i}`, completions: completions(1) })
     )
-    expect(title(block)).toBe('Education')
-  })
-})
-
-describe('status', () => {
-  it('bundles the block, the title and the job', () => {
-    const s = status([habit({ completions: completions(5) })], TODAY)
-    expect(s.job).toBe('Human')
-    expect(s.title).toBe('Fitness')
-    expect(s.block).toHaveLength(8)
+    expect(status(habits, TODAY).title).toBe('Habit Master')
   })
 })

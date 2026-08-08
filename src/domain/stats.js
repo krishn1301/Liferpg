@@ -92,7 +92,12 @@ export function overview(habits, todayKey, fromKey) {
       (sum, h) => sum + Object.values(h.completions ?? {}).filter(Boolean).length,
       0
     ),
-    xp: totalXp(active, todayKey),
+    // Every other figure on this panel is about what you currently track, so it
+    // runs over `active`. XP is the exception and has to be: it is a lifetime
+    // total, `xp.js` promises earned XP is never taken back, and Today computes
+    // it over all habits. Scoping it to active here meant archiving one habit
+    // made two numbers both labelled total XP disagree with each other.
+    xp: totalXp(habits, todayKey),
     rate: due ? Math.round((done / due) * 100) : 0
   }
 }
