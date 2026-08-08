@@ -4,8 +4,15 @@ import { useToday } from '../state/useToday'
 import { describeSchedule, DAY_LABELS } from '../domain/schedule'
 import { HABIT_KINDS, isVow, cleanStreak, relapseKeys } from '../domain/quit'
 import { formatTime, fromDateKey } from '../domain/dates'
-import { CATEGORIES, ICONS, categoryOf, MAX_HABITS } from '../domain/constants'
-import { canRemind, isIOS } from '../platform/device'
+import {
+  CATEGORIES,
+  ICONS,
+  categoryOf,
+  MAX_HABITS,
+  DIFFICULTIES,
+  STEP_GOALS
+} from '../domain/constants'
+import { canRemind, canCountSteps, isIOS } from '../platform/device'
 import { requestReminderPermission } from '../platform/reminders'
 import {
   Screen,
@@ -273,8 +280,26 @@ function HabitSheet({ draft, today, onClose, onSave, onUnrelapse, onArchive, onD
             times={local.reminders ?? []}
             onChange={(reminders) => set({ reminders })}
           />
+
+          <StepGoalEditor goal={local.stepGoal ?? 0} onChange={(stepGoal) => set({ stepGoal })} />
         </>
       )}
+
+      {/* XP is derived from history rather than banked at the moment of a tap,
+          so a multiplier applies to every day this habit has ever been
+          completed — including backwards. That is the honest consequence of a
+          derived score and it can move your level in either direction, so the
+          hint says so rather than letting it be a surprise. */}
+      <Field
+        label="Difficulty"
+        hint="Changes the XP this habit is worth — including for days you have already completed, so your level can move."
+      >
+        <Segmented
+          value={String(local.xpBonus ?? 1)}
+          onChange={(key) => set({ xpBonus: Number(key) })}
+          options={DIFFICULTIES.map((d) => ({ key: String(d.bonus), label: d.label }))}
+        />
+      </Field>
 
       {onDelete && <DangerZone vow={vow} onDelete={onDelete} />}
     </Sheet>
@@ -324,6 +349,37 @@ function DangerZone({ vow, onDelete }) {
  * for notifications is how an app collects a permanent Deny it can never
  * recover from.
  */
+/**
+ * A step goal, which turns a habit into one the phone can tick for you.
+ *
+ * Only offered where steps can actually be counted — the same "platform truth"
+ * rule the reminder editor follows. Showing a goal picker in a browser would be
+ * offering a control that quietly never fires.
+ */
+function StepGoalEditor({ goal, onChange }) {
+  if (!canCountSteps) return null
+
+  return (
+    <Field
+      label="Step goal"
+      hint={
+        goal > 0
+          ? 'Reaching this marks the habit done for the day. You can still untick it, and it will not tick itself again.'
+          : undefined
+      }
+    >
+      <Segmented
+        value={String(goal ?? 0)}
+        onChange={(key) => onChange(Number(key))}
+        options={STEP_GOALS.map((n) => ({
+          key: String(n),
+          label: n === 0 ? 'Off' : `${n / 1000}k`
+        }))}
+      />
+    </Field>
+  )
+}
+
 function ReminderEditor({ times, onChange }) {
   const [draft, setDraft] = useState('08:00')
   const [denied, setDenied] = useState(false)

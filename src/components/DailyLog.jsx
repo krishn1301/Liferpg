@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { logFor } from '../domain/daily'
 import { LOG_SCALE, WATER_TARGET, WATER_MAX } from '../domain/constants'
+import { formatSteps, goalMet } from '../domain/steps'
 import { Overline, Panel, Rule, Data } from './ui'
 
 // The end-of-day log. Lives here rather than on a screen because Today and the
@@ -15,13 +16,23 @@ import { Overline, Panel, Rule, Data } from './ui'
  * @param dateKey the day being logged — the Calendar passes a past one
  * @param onSet   (field, value) => void, straight into the `log/set` action
  */
-export default function DailyLog({ dailyLogs, dateKey, onSet, title = 'End of day' }) {
+export default function DailyLog({ dailyLogs, dateKey, onSet, stepGoal, title = 'End of day' }) {
   const log = logFor(dailyLogs, dateKey)
 
   return (
     <>
       <Overline>{title}</Overline>
       <Panel flush>
+        {/* Read-only, and only once there is something to show. Steps are the
+            one field here nobody enters — the phone has already counted them,
+            and a zero on a day the sensor was off would be a lie rather than a
+            blank. */}
+        {typeof log.steps === 'number' && (
+          <>
+            <Steps steps={log.steps} goal={stepGoal} />
+            <Rule />
+          </>
+        )}
         <Scale
           label="Mood"
           value={log.mood}
@@ -100,6 +111,44 @@ function Scale({ label, value, onChange, low, high }) {
         <Data style={S.anchor}>{low}</Data>
         <Data style={S.anchor}>{high}</Data>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Steps, as a readout rather than a control.
+ *
+ * Every other row here is something you tell the app; this one is something the
+ * app tells you, so it gets no touch target and no affordance. The bar only
+ * appears when a habit has actually set a goal — a progress track against no
+ * target is decoration.
+ */
+function Steps({ steps, goal }) {
+  const done = goalMet(steps, goal)
+  const fraction = goal > 0 ? Math.min(1, steps / goal) : 0
+
+  return (
+    <div style={S.row}>
+      <div style={S.head}>
+        <Data style={S.label}>Steps</Data>
+        <Data style={S.value}>
+          {formatSteps(steps)}
+          {goal > 0 ? ` / ${formatSteps(goal)}${done ? ' ✓' : ''}` : ''}
+        </Data>
+      </div>
+      {goal > 0 && (
+        <span style={S.track} aria-hidden="true">
+          <span
+            style={{
+              ...S.trackFill,
+              transform: `scaleX(${fraction})`,
+              // The one place a met goal is worth SIGNAL: it is the moment the
+              // number stopped being a readout and became a completion.
+              background: done ? 'var(--accent)' : 'var(--textMuted)'
+            }}
+          />
+        </span>
+      )}
     </div>
   )
 }
@@ -261,6 +310,16 @@ const S = {
     borderRadius: 0
   },
   waterRow: { display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 },
+  // Square and 2px, matching the Status panel's stat tracks — both are marks in
+  // the notation rather than containers, so neither takes a radius.
+  track: {
+    display: 'block',
+    height: 2,
+    marginTop: 9,
+    background: 'var(--rule)',
+    overflow: 'hidden'
+  },
+  trackFill: { display: 'block', height: '100%', transformOrigin: 'left' },
   glasses: { display: 'flex', flexWrap: 'wrap', flex: 1, minWidth: 0, marginLeft: -4 },
   // Same compromise the seven-across day picker makes, and for the same reason:
   // eight 48px-wide targets do not fit beside the stepper on a 411px screen, so

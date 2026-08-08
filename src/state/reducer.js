@@ -49,6 +49,10 @@ function normalizeHabit(habit) {
     kind: HABIT_KINDS.build,
     relapses: {},
     xpBonus: 1,
+    // Zero means "not a step habit", which is why `goalMet` refuses to be
+    // satisfied by it — otherwise every habit would complete itself the moment
+    // step counting was switched on.
+    stepGoal: 0,
     archived: false,
     completions: {},
     skips: {},

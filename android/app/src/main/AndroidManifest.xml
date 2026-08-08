@@ -38,4 +38,16 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Step counting. Runtime-requested from API 29 up; implicitly granted
+         below that, which is why the plugin gates the request on the API level
+         rather than always asking. -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+    <!-- The pedometer is not required to install. Most of this app has nothing
+         to do with steps, and a `required` feature would hide it on the Play
+         Store from every device without the sensor. -->
+    <uses-feature
+        android:name="android.hardware.sensor.stepcounter"
+        android:required="false" />
 </manifest>
