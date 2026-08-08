@@ -28,15 +28,17 @@ export const MED_TIMES = [
   { key: '22:00', label: 'Night', icon: '🌙' }
 ]
 
-// Routine-block colours, drawn from the same mid-luminance band as
-// CATEGORY_COLORS so a block reads on both grounds. See theme/tokens.js.
+// Routine-block colours. These used to be six hex literals copied out of
+// CATEGORY_COLORS, which meant moving a category colour silently left My Day on
+// the old value — exactly what happened when fitness moved off red. They are
+// references now, so the band can only be left deliberately.
 export const ROUTINE_CATS = {
-  morning: { label: 'Morning', color: '#94741b' },
-  work: { label: 'Work', color: '#3a67c0' },
-  exercise: { label: 'Exercise', color: '#d8232a' },
-  meal: { label: 'Meal', color: '#1c8f6a' },
-  personal: { label: 'Personal', color: '#b0468f' },
-  evening: { label: 'Evening', color: '#6a4bc4' }
+  morning: { label: 'Morning', color: CATEGORY_COLORS.social },
+  work: { label: 'Work', color: CATEGORY_COLORS.education },
+  exercise: { label: 'Exercise', color: CATEGORY_COLORS.fitness },
+  meal: { label: 'Meal', color: CATEGORY_COLORS.health },
+  personal: { label: 'Personal', color: CATEGORY_COLORS.personal },
+  evening: { label: 'Evening', color: CATEGORY_COLORS.productivity }
 }
 
 export const MAX_HABITS = 99
@@ -49,6 +51,13 @@ export const LOG_SCALE = 5
  * and no badge depends on it; it exists so the counter has something to fill.
  */
 export const WATER_TARGET = 8
+
+/**
+ * And the ceiling. The counter draws one box per glass, so an unbounded `+`
+ * let a leaning thumb wrap the row over several lines and reflow the panel.
+ * Well above any honest day, low enough to stay one or two rows.
+ */
+export const WATER_MAX = 20
 
 /**
  * Starter packs for onboarding. A tester who has to invent five habits before

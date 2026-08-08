@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { logFor } from '../domain/daily'
-import { LOG_SCALE, WATER_TARGET } from '../domain/constants'
+import { LOG_SCALE, WATER_TARGET, WATER_MAX } from '../domain/constants'
 import { Overline, Panel, Rule, Data } from './ui'
 
 // The end-of-day log. Lives here rather than on a screen because Today and the
@@ -65,16 +65,21 @@ function Scale({ label, value, onChange, low, high }) {
             : `${value} / ${LOG_SCALE} · ${value >= 4 ? high : value <= 2 ? low : 'OK'}`}
         </Data>
       </div>
-      <div style={S.marks}>
+      {/* A radiogroup, not five toggles. The fill is cumulative — at mood 3 the
+          first three squares are filled — so `aria-pressed` announced three
+          separate buttons as "pressed" and left a screen-reader user counting
+          them to work out the value. One radio is checked; the rest are not. */}
+      <div style={S.marks} role="radiogroup" aria-label={label}>
         {Array.from({ length: LOG_SCALE }, (_, i) => {
           const point = i + 1
           const on = value !== null && point <= value
           return (
             <button
               key={point}
+              role="radio"
               onClick={() => onChange(value === point ? null : point)}
-              aria-label={`${label} ${point} of ${LOG_SCALE}`}
-              aria-pressed={on}
+              aria-label={`${point} of ${LOG_SCALE}${point === 1 ? `, ${low}` : point === LOG_SCALE ? `, ${high}` : ''}`}
+              aria-checked={value === point}
               style={S.markHit}
             >
               <span
@@ -87,6 +92,13 @@ function Scale({ label, value, onChange, low, high }) {
             </button>
           )
         })}
+      </div>
+      {/* Five identical squares say nothing about which way is up. The value
+          line above only names an end once you have already picked one, which
+          is too late to be an affordance. */}
+      <div style={S.anchors} aria-hidden="true">
+        <Data style={S.anchor}>{low}</Data>
+        <Data style={S.anchor}>{high}</Data>
       </div>
     </div>
   )
@@ -102,16 +114,28 @@ function Water({ value, onChange }) {
         </Data>
       </div>
       <div style={S.waterRow}>
-        <div style={S.glasses} role="img" aria-label={`${value} of ${WATER_TARGET} glasses`}>
+        {/* Tappable. Eight presses of `+` to log an ordinary day is a lot of
+            friction on the screen people open last thing at night, and the
+            boxes were sitting right there looking pressable. Tapping the nth
+            sets n; tapping the one you are already on clears back to n-1, so
+            the row can go down as well as up without reaching for the stepper. */}
+        <div style={S.glasses}>
           {Array.from({ length: Math.max(WATER_TARGET, value) }, (_, i) => (
-            <span
+            <button
               key={i}
-              style={{
-                ...S.glass,
-                background: i < value ? 'var(--text)' : 'transparent',
-                borderColor: i < value ? 'var(--text)' : 'var(--rule)'
-              }}
-            />
+              onClick={() => onChange(value === i + 1 ? i : i + 1)}
+              aria-label={`${i + 1} glass${i ? 'es' : ''}`}
+              aria-pressed={i < value}
+              style={S.glassHit}
+            >
+              <span
+                style={{
+                  ...S.glass,
+                  background: i < value ? 'var(--text)' : 'transparent',
+                  borderColor: i < value ? 'var(--text)' : 'var(--rule)'
+                }}
+              />
+            </button>
           ))}
         </div>
         <div style={S.stepper}>
@@ -122,7 +146,16 @@ function Water({ value, onChange }) {
           >
             −
           </button>
-          <button onClick={() => onChange(value + 1)} style={S.step} aria-label="One glass more">
+          {/* Capped. `+` was unbounded and the row renders one box per glass,
+              so a leaning thumb grew the panel until it wrapped over several
+              lines. Nothing is scored against this number; it does not need to
+              go to a hundred. */}
+          <button
+            onClick={() => onChange(Math.min(WATER_MAX, value + 1))}
+            style={S.step}
+            disabled={value >= WATER_MAX}
+            aria-label="One glass more"
+          >
             +
           </button>
         </div>
@@ -143,8 +176,14 @@ function Note({ value, onChange }) {
 
   return (
     <div style={S.row}>
-      <Data style={S.label}>Note</Data>
+      {/* A real label, not a span that happens to sit above the field. Without
+          it the textarea's only accessible name was its placeholder, which
+          disappears the moment anything is typed into it. */}
+      <label htmlFor="daily-note" style={S.noteLabel}>
+        Note
+      </label>
       <textarea
+        id="daily-note"
         rows={2}
         style={S.note}
         value={draft}
@@ -166,6 +205,17 @@ const S = {
     textTransform: 'uppercase',
     color: 'var(--textMuted)'
   },
+  // The others are wrapped in `Data`, which supplies the mono face. A real
+  // <label> cannot be, so it carries the face itself.
+  noteLabel: {
+    display: 'block',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--fs-2xs)',
+    fontWeight: 600,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    color: 'var(--textMuted)'
+  },
   value: {
     fontSize: 'var(--fs-2xs)',
     letterSpacing: '0.1em',
@@ -174,6 +224,20 @@ const S = {
     textAlign: 'right'
   },
   marks: { display: 'flex', marginTop: 4, marginLeft: -12 },
+  // Sits under the row, spanning it, so the two ends are labelled where the
+  // scale actually ends. --fs-3xs and muted: an anchor is a legend, not content.
+  anchors: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginTop: -6,
+    paddingRight: 14
+  },
+  anchor: {
+    fontSize: 'var(--fs-3xs)',
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    color: 'var(--textMuted)'
+  },
   // The 48dp target is the invisible button; the visible mark is small. Made
   // the other way round — a full-width 48px block per point — five filled
   // rectangles ended up the loudest thing on the screen, shouting over the
@@ -197,7 +261,19 @@ const S = {
     borderRadius: 0
   },
   waterRow: { display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 },
-  glasses: { display: 'flex', flexWrap: 'wrap', gap: 4, flex: 1, minWidth: 0 },
+  glasses: { display: 'flex', flexWrap: 'wrap', flex: 1, minWidth: 0, marginLeft: -4 },
+  // Same compromise the seven-across day picker makes, and for the same reason:
+  // eight 48px-wide targets do not fit beside the stepper on a 411px screen, so
+  // width shrinks and height carries the touch target. See DESIGN.md.
+  glassHit: {
+    height: 'var(--touch)',
+    width: 20,
+    minWidth: 0,
+    padding: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   glass: { width: 12, height: 18, border: '1px solid', flexShrink: 0 },
   stepper: { display: 'flex', gap: 6, flexShrink: 0 },
   step: {

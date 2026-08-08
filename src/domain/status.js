@@ -1,6 +1,7 @@
 import { CATEGORIES, categoryOf } from './constants'
 import { activeHabits } from './streaks'
 import { isVow, cleanDaysTotal } from './quit'
+import { highestTitle } from './xp'
 
 // The character sheet: one stat per category, derived from what you actually
 // did. Nothing here is stored and nothing is incremented — a stat is recomputed
@@ -60,23 +61,18 @@ export function statBlock(habits, todayKey) {
 }
 
 /**
- * The title, taken from the strongest category.
+ * Everything the STATUS window needs, in one call.
  *
- * Ties break alphabetically rather than by declaration order, so a brand new
- * document does not silently award "Fitness" for being first in the list.
- * Nothing earned yet gets an honest placeholder instead of a flattering one.
+ * There used to be a `job` here, hardcoded to "Human". It was a joke about the
+ * source material and it was also a constant rendered as content in the most
+ * valuable space on the screen — the same six letters for every user forever.
+ * It is gone.
+ *
+ * `title` used to be the strongest *category*, which meant the panel printed
+ * "Fitness" as though a category name were an achievement, directly above a
+ * stat grid that already showed Fitness was the highest number. It is now the
+ * highest badge held, so it says something the rest of the panel does not.
  */
-export function title(block) {
-  const best = [...block].sort((a, b) => b.total - a.total || a.label.localeCompare(b.label))[0]
-  if (!best || best.total === 0) return 'Unranked'
-  return best.label
-}
-
-/** Job is always Human. It is the joke in the source material and it is true. */
-export const JOB = 'Human'
-
-/** Everything the STATUS window needs, in one call. */
 export function status(habits, todayKey) {
-  const block = statBlock(habits, todayKey)
-  return { block, title: title(block), job: JOB }
+  return { block: statBlock(habits, todayKey), title: highestTitle(habits, todayKey) }
 }
