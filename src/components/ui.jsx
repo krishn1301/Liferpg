@@ -175,11 +175,14 @@ export function Segmented({ options, value, onChange, style }) {
   )
 }
 
-export function Field({ label, children }) {
+export function Field({ label, hint, children }) {
   return (
     <label style={S.field}>
       <span style={S.fieldLabel}>{label}</span>
       {children}
+      {/* Under the control, not above it: a caveat about what a setting does is
+          only worth reading once you have found the setting. */}
+      {hint && <span style={S.fieldHint}>{hint}</span>}
     </label>
   )
 }
@@ -402,5 +405,14 @@ const S = {
     letterSpacing: '0.14em',
     color: 'var(--textDim)',
     marginBottom: 8
+  },
+  // Prose, so it takes the language face rather than the mono — this is the one
+  // thing in a field that is a sentence rather than a label.
+  fieldHint: {
+    display: 'block',
+    fontSize: 'var(--fs-md)',
+    color: 'var(--textMuted)',
+    lineHeight: 1.5,
+    marginTop: 8
   }
 }

@@ -43,6 +43,31 @@ export const ROUTINE_CATS = {
 
 export const MAX_HABITS = 99
 
+/**
+ * Difficulty, as an XP multiplier.
+ *
+ * Feeds `xpBonus`, which `totalXp` has always honoured — the field existed and
+ * was exported to Excel long before anything could set it above 1.
+ *
+ * Three steps and no more. A ×3 top end keeps a hard habit worth roughly three
+ * easy ones, which is about the truth; wider than that and the sensible play
+ * becomes marking everything HARD, at which point the multiplier means nothing.
+ */
+export const DIFFICULTIES = [
+  { bonus: 1, label: 'Easy' },
+  { bonus: 2, label: 'Medium' },
+  { bonus: 3, label: 'Hard' }
+]
+
+/**
+ * Step goals offered in the picker, plus Off.
+ *
+ * Round numbers people actually recognise rather than a free-text field: a
+ * spinner asking for an exact step target invites 7,341 and answers a question
+ * nobody was asking.
+ */
+export const STEP_GOALS = [0, 5000, 8000, 10000, 12000]
+
 /** The top of the mood and energy scales. Five points, so a tap picks one. */
 export const LOG_SCALE = 5
 

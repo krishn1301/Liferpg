@@ -39,6 +39,18 @@ export const isStandalone =
 export const canRemind = Capacitor.isNativePlatform()
 
 /**
+ * Can this build read a step count?
+ *
+ * Native only, for the same reason as `canRemind`: a browser cannot read the
+ * pedometer. The Android target reads the hardware counter through the local
+ * StepCounter plugin; the iOS target will read HealthKit and report daily
+ * totals directly. Whether the device actually *has* a sensor, and whether the
+ * user has allowed it, are separate questions the plugin answers at runtime —
+ * this only says the capability exists in principle.
+ */
+export const canCountSteps = Capacitor.isNativePlatform()
+
+/**
  * Ask the browser to make our storage durable.
  *
  * All data lives in localStorage via @capacitor/preferences. On iOS, script-

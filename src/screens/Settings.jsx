@@ -6,7 +6,7 @@ import { describeBackup, exportBackup, parseBackup, readFile } from '../platform
 import { convertDesktopSave, describeImport, isDesktopSave } from '../platform/importDesktop'
 import { exportExcel } from '../platform/excel'
 import { platform } from '../platform/storage'
-import { canRemind, isIOS, isStandalone } from '../platform/device'
+import { canRemind, canCountSteps, isIOS, isStandalone } from '../platform/device'
 import {
   pendingCount,
   reminderPermission,
@@ -14,6 +14,7 @@ import {
   syncReminders
 } from '../platform/reminders'
 import { plannedReminders, MAX_PENDING } from '../domain/reminders'
+import { stepPermission, requestStepPermission } from '../platform/steps'
 import { Screen, Overline, Button, Sheet, Panel, Segmented } from '../components/ui'
 
 const VERSION = __APP_VERSION__
@@ -116,6 +117,14 @@ export default function Settings() {
             there to switch on.
           </p>
         )}
+      </Panel>
+
+      <Overline>Steps</Overline>
+      <Panel>
+        <StepsPanel
+          enabled={Boolean(doc.settings.stepsEnabled)}
+          onChange={(stepsEnabled) => dispatch({ type: 'settings/set', changes: { stepsEnabled } })}
+        />
       </Panel>
 
       {isIOS && !isStandalone && (
@@ -353,6 +362,76 @@ function RemindersPanel({ habits, today }) {
           }}
         >
           Allow notifications
+        </Button>
+      )}
+    </>
+  )
+}
+
+/**
+ * Steps, off until asked for.
+ *
+ * Three states, not two, because "your phone cannot do this" and "you have not
+ * allowed this" need different copy — telling someone to check their settings
+ * when the hardware is simply absent wastes their time. The permission is
+ * requested here and nowhere else, so the dialog only ever appears in response
+ * to someone switching steps on.
+ */
+function StepsPanel({ enabled, onChange }) {
+  const [state, setState] = useState({ available: false, granted: false })
+  const [checked, setChecked] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const next = await stepPermission()
+      if (cancelled) return
+      setState(next)
+      setChecked(true)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [enabled])
+
+  if (!checked) return <p style={{ ...S.body, marginBottom: 0 }}>Checking…</p>
+
+  if (!canCountSteps || !state.available) {
+    return (
+      <p style={{ ...S.body, marginBottom: 0 }}>
+        {!canCountSteps
+          ? `Step counting needs the installed app. ${isIOS ? 'On iPhone it will read Health once the native app lands.' : 'A browser cannot read the pedometer.'}`
+          : 'This device has no step counter, so there is nothing to read.'}
+      </p>
+    )
+  }
+
+  return (
+    <>
+      <p style={S.body}>
+        {enabled
+          ? 'Steps are counted by the phone itself and recorded with each day, alongside mood and water. Nothing is uploaded.'
+          : 'Let LifeRPG read the step counter your phone already keeps, and record it with each day.'}
+      </p>
+
+      {enabled ? (
+        <Button variant="ghost" style={{ width: '100%' }} onClick={() => onChange(false)}>
+          Stop counting steps
+        </Button>
+      ) : (
+        <Button
+          variant="ghost"
+          style={{ width: '100%' }}
+          onClick={async () => {
+            const next = await requestStepPermission()
+            setState(next)
+            // Only switch on if it will actually work. Storing `true` against a
+            // denied permission leaves a toggle that claims to be on and a
+            // number that never moves.
+            if (next.granted) onChange(true)
+          }}
+        >
+          {state.granted ? 'Count my steps' : 'Allow step counting'}
         </Button>
       )}
     </>

@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-route
 import { App as CapApp } from '@capacitor/app'
 import { StoreProvider, useStore } from './state/StoreProvider'
 import { useReminders } from './state/useReminders'
+import { useSteps } from './state/useSteps'
 import { requestPersistentStorage } from './platform/device'
 import BottomTabs, { TABS } from './components/BottomTabs'
 import { CatalogCard } from './components/catalog'
@@ -40,11 +41,15 @@ export default function App() {
 }
 
 function Shell() {
-  const { doc, ready } = useStore()
+  const { doc, ready, dispatch } = useStore()
 
   // Mounted at the shell, above the router, so the notification queue tracks
   // the document no matter which screen a habit was edited from.
   useReminders(doc.habits, ready)
+
+  // Same reasoning: steps arrive from the hardware rather than from a screen,
+  // so nothing about reading them should depend on which tab is open.
+  useSteps(doc, ready, dispatch)
 
   // Rendering the app against an empty document and then swapping in the real
   // one makes every list flash. Waiting one frame for storage is cheaper.

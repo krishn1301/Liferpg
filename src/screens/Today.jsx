@@ -7,6 +7,7 @@ import { describeSchedule, completionsThisWeek } from '../domain/schedule'
 import { isVow, cleanStreak } from '../domain/quit'
 import { categoryOf } from '../domain/constants'
 import { xpSummary } from '../domain/xp'
+import { formatSteps } from '../domain/steps'
 import { fromDateKey } from '../domain/dates'
 import { tap } from '../platform/haptics'
 import {
@@ -33,6 +34,7 @@ export default function Today() {
   const vows = useMemo(() => activeHabits(doc.habits).filter(isVow), [doc.habits])
   const done = habits.filter((h) => h.completions?.[today]).length
   const nextUp = habits.find((h) => !h.completions?.[today])
+  const todaySteps = doc.dailyLogs?.[today]?.steps
   const xp = xpSummary(doc.habits, today)
 
   // The id of the vow whose relapse is being recorded, or null. It used to be a
@@ -145,6 +147,7 @@ export default function Today() {
               // the live edge. Computed here rather than in the row because a
               // row cannot see its siblings.
               isNext={habit.id === nextUp?.id}
+              steps={todaySteps}
               onToggle={() => toggle(habit)}
             />
           ))}
@@ -168,6 +171,9 @@ export default function Today() {
       <DailyLog
         dailyLogs={doc.dailyLogs}
         dateKey={today}
+        // The largest goal any habit is asking for today, so the readout is
+        // measured against the target that is actually still open.
+        stepGoal={habits.reduce((max, h) => Math.max(max, h.stepGoal ?? 0), 0)}
         onSet={(field, value) => dispatch({ type: 'log/set', dateKey: today, field, value })}
       />
 
@@ -316,7 +322,7 @@ function RelapseSheet({ vows, today, initial, onClose, onConfirm }) {
   )
 }
 
-function HabitRow({ habit, questNumber, today, isNext, onToggle }) {
+function HabitRow({ habit, questNumber, today, isNext, steps, onToggle }) {
   const cat = categoryOf(habit.category)
   const isDone = Boolean(habit.completions?.[today])
   const { streak } = currentStreak(habit, today)
@@ -332,9 +338,15 @@ function HabitRow({ habit, questNumber, today, isNext, onToggle }) {
   // flash of celebration for something you finished yesterday.
   const [sweeping, setSweeping] = useState(false)
 
-  const meta = weekly
-    ? `${completionsThisWeek(habit, today)}/${habit.schedule.timesPerWeek} this week`
-    : describeSchedule(habit.schedule)
+  // A step habit says where it has got to rather than when it repeats. The
+  // schedule is the least interesting thing about a row the phone is filling in
+  // for you; how far along it is, is the whole point.
+  const meta =
+    habit.stepGoal > 0 && typeof steps === 'number'
+      ? `${formatSteps(steps)} / ${formatSteps(habit.stepGoal)} steps`
+      : weekly
+        ? `${completionsThisWeek(habit, today)}/${habit.schedule.timesPerWeek} this week`
+        : describeSchedule(habit.schedule)
 
   const press = () => {
     if (!isDone) setSweeping(true)

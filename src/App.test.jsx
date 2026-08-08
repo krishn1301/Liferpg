@@ -16,7 +16,15 @@ vi.mock('@capacitor/preferences', () => ({
   }
 }))
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { isNativePlatform: () => false, getPlatform: () => 'web' }
+  Capacitor: { isNativePlatform: () => false, getPlatform: () => 'web' },
+  // The step counter is a local plugin, so it is registered rather than
+  // imported. Nothing here ever calls it — `canCountSteps` is false in jsdom —
+  // but the registration runs at module load, so it has to exist.
+  registerPlugin: () => ({
+    checkPermission: async () => ({ granted: false, available: false }),
+    requestPermission: async () => ({ granted: false, available: false }),
+    read: async () => ({ available: false })
+  })
 }))
 vi.mock('@capacitor/app', () => ({
   App: { addListener: async () => ({ remove: () => {} }), exitApp: () => {} }
