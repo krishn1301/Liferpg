@@ -60,8 +60,13 @@ export default defineConfig(({ mode }) => ({
         short_name: 'LifeRPG',
         description:
           'Gamified offline habit tracker: streaks, XP, vows you keep by not slipping, medicines, and an end-of-day log.',
-        theme_color: '#0a0a0b',
-        background_color: '#0a0a0b',
+        // VOID, matching `--bg` in theme/global.css. These two were left on the
+        // pre-System near-black when the palette changed. `applyTheme` corrects
+        // the runtime meta tag by reading --bg back out of the cascade, but it
+        // cannot reach the manifest — so the splash screen and the task
+        // switcher kept painting the old colour.
+        theme_color: '#05070d',
+        background_color: '#05070d',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '.',

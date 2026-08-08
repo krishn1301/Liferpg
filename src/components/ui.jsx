@@ -201,9 +201,11 @@ export const inputStyle = {
 
 const S = {
   screen: {
-    // The trailing 40px clears the floating tab bar's own padding, border and
-    // dock gutter — the bar is taller than `--tab-height` by design.
-    padding: `calc(var(--safe-top) + 20px) 18px calc(var(--tab-height) + var(--safe-bottom) + 40px)`,
+    // `--dock-clearance` is the floating bar's real footprint plus a gutter,
+    // defined next to the metrics it is derived from. This used to spell the
+    // sum out as `--tab-height + 40px`, which left 20px clear and no record of
+    // where the 40 came from. See global.css.
+    padding: `calc(var(--safe-top) + 20px) 18px var(--dock-clearance)`,
     maxWidth: 720,
     margin: '0 auto'
   },

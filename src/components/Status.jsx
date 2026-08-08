@@ -1,8 +1,8 @@
 import { status } from '../domain/status'
-import { levelFromXp, totalXp } from '../domain/xp'
+import { xpSummary } from '../domain/xp'
 import { Panel, Data } from './ui'
 
-// The STATUS window: level, job, title, and one stat per category.
+// The STATUS window: level, title, and one stat per category.
 //
 // Centred, unlike everything else in this app. That is deliberate and it is the
 // only place it happens — the System's windows announce themselves down the
@@ -10,21 +10,18 @@ import { Panel, Data } from './ui'
 // scannability of a left edge at the same time.
 
 export default function Status({ habits, todayKey }) {
-  const xp = totalXp(habits, todayKey)
-  const level = levelFromXp(xp)
-  const { block, job, title } = status(habits, todayKey)
+  const xp = xpSummary(habits, todayKey)
+  const { block, title } = status(habits, todayKey)
 
   return (
     <Panel style={S.panel}>
       <Data style={S.label}>Level</Data>
       <div className="glow" style={S.level}>
-        {level.level}
+        {xp.level}
       </div>
 
+      {/* One row, not two. The other was "Job: Human". */}
       <div style={S.identity}>
-        <Data style={S.idRow}>
-          <span style={S.idKey}>Job</span> {job}
-        </Data>
         <Data style={S.idRow}>
           <span style={S.idKey}>Title</span> {title}
         </Data>
@@ -33,16 +30,26 @@ export default function Status({ habits, todayKey }) {
       <div style={S.grid}>
         {block.map((stat) => (
           <div key={stat.key} style={S.stat}>
-            {/* The category's own colour, as a mark rather than as text — these
-                hues are pinned to clear 3:1 as fills, not 4.5:1 as type. */}
-            <span style={{ ...S.mark, background: stat.color }} aria-hidden="true" />
-            <Data style={S.statName}>{stat.label}</Data>
-            <Data style={S.statValue}>{stat.value}</Data>
+            <div style={S.statRow}>
+              {/* The category's own colour, as a mark rather than as text —
+                  these hues are pinned to clear 3:1 as fills, not 4.5:1 as
+                  type. This is where category colour still lives now that the
+                  code strip is monochrome. */}
+              <span style={{ ...S.mark, background: stat.color }} aria-hidden="true" />
+              <Data style={S.statName}>{stat.label}</Data>
+              <Data style={S.statValue}>{stat.value}</Data>
+            </div>
+            {/* Progress toward the next point. Without it a stat that has not
+                moved in three weeks looks identical to one that ticks over
+                tomorrow, which is most of why this panel read as decoration. */}
+            <span style={S.track} aria-hidden="true">
+              <span style={{ ...S.trackFill, transform: `scaleX(${stat.progress})` }} />
+            </span>
           </div>
         ))}
       </div>
 
-      <Data style={S.foot}>{xp} XP banked · every stat derived</Data>
+      <Data style={S.foot}>Total {xp.total} XP · every stat derived</Data>
     </Panel>
   )
 }
@@ -93,8 +100,25 @@ const S = {
     margin: '16px 0 4px',
     textAlign: 'left'
   },
-  stat: { display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0' },
+  stat: { padding: '6px 0 7px' },
+  statRow: { display: 'flex', alignItems: 'center', gap: 8 },
   mark: { width: 8, height: 8, flexShrink: 0 },
+  // Square, 2px, and only as wide as its own row. Same reasoning as the code
+  // strip: this is a mark in a notation, so it does not get a corner radius.
+  track: {
+    display: 'block',
+    height: 2,
+    marginTop: 5,
+    background: 'var(--rule)',
+    overflow: 'hidden'
+  },
+  // scaleX rather than width — compositor-only, and there are eight of these.
+  trackFill: {
+    display: 'block',
+    height: '100%',
+    background: 'var(--textMuted)',
+    transformOrigin: 'left'
+  },
   statName: {
     flex: 1,
     minWidth: 0,

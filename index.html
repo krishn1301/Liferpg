@@ -9,7 +9,11 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
     />
-    <meta name="theme-color" content="#0a0a0b" />
+    <!-- VOID, matching --bg. applyTheme overwrites this at runtime by reading
+         --bg out of the cascade, so it only has to be right for the first
+         paint — but it was left on the pre-System near-black, which is exactly
+         the frame where nothing else has loaded to cover it. -->
+    <meta name="theme-color" content="#05070d" />
     <meta
       name="description"
       content="Gamified offline habit tracker: streaks, XP, vows you keep by not slipping, medicines, and an end-of-day log."

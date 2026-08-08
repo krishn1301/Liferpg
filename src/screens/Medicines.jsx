@@ -448,5 +448,5 @@ const S = {
   },
   courseRow: { display: 'flex', gap: 8 },
   hint: { fontSize: 'var(--fs-sm)', color: 'var(--textDim)', marginTop: 8, lineHeight: 1.5 },
-  warn: { fontSize: 'var(--fs-sm)', color: 'var(--warn)', marginTop: 8 }
+  warn: { fontSize: 'var(--fs-sm)', color: 'var(--danger)', marginTop: 8 }
 }

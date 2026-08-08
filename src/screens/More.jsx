@@ -1,17 +1,18 @@
 import { Link } from 'react-router-dom'
 import { useStore } from '../state/StoreProvider'
 import { useToday } from '../state/useToday'
-import { totalXp, levelFromXp, earnedBadges } from '../domain/xp'
+import { xpSummary, earnedBadges } from '../domain/xp'
 import { dosesForDay } from '../domain/medicines'
 import { Screen, Overline, Panel, Rule, Data } from '../components/ui'
-import { TickScale } from '../components/catalog'
 
 export default function More() {
   const { doc } = useStore()
   const today = useToday()
 
-  const xp = totalXp(doc.habits)
-  const level = levelFromXp(xp)
+  // `today` matters: without it a vow's clean-day count is measured against an
+  // undefined date, which is how this screen used to show vow owners a
+  // different level from the one Today was showing.
+  const xp = xpSummary(doc.habits, today)
   const badges = earnedBadges(doc.habits, today)
   const earned = badges.filter((b) => b.earned).length
   const dosesLeft = dosesForDay(doc.medicines, doc.dailyLogs, today).filter((d) => !d.taken).length
@@ -37,27 +38,12 @@ export default function More() {
   ]
 
   return (
-    <Screen title="More" subtitle={`Level ${level.level} · ${xp} XP`}>
-      <Panel style={{ padding: '14px 16px 16px' }}>
-        <div style={S.heroTop}>
-          <Data style={S.heroLabel}>Level</Data>
-          <Data style={S.heroBadges}>
-            {earned} of {badges.length} badges
-          </Data>
-        </div>
-        <div className="glow" style={S.heroLevel}>
-          {String(level.level).padStart(2, '0')}
-        </div>
-        <TickScale
-          value={level.current / level.needed}
-          label={`Level ${level.level}, ${level.current} of ${level.needed} XP to level ${level.level + 1}`}
-        />
-        <Data style={S.heroSub}>
-          {level.current} / {level.needed} to level {level.level + 1}
-        </Data>
-      </Panel>
-
-      <Overline>Everything else</Overline>
+    // The level panel used to render here too, a third copy of the same fact
+    // after Today's and Stats'. Today needs it because it is the daily hit and
+    // Stats needs it because it is the record; More is a hub and owns neither.
+    // The subtitle carries the number, which is all this screen ever needed.
+    <Screen title="More" subtitle={`Level ${xp.level} · total ${xp.total} XP`}>
+      <Overline style={{ marginTop: 0 }}>Everything else</Overline>
       <Panel flush>
         {links.map((link, i) => (
           <div key={link.to}>
@@ -75,12 +61,18 @@ export default function More() {
         ))}
       </Panel>
 
-      <Overline>Badges</Overline>
+      <Overline>
+        Badges · {earned} of {badges.length}
+      </Overline>
       <Panel flush>
         {badges.map((badge, i) => (
           <div key={badge.id}>
             {i > 0 && <Rule />}
-            <div style={{ ...S.badge, opacity: badge.earned ? 1 : 0.45 }}>
+            {/* No row opacity. Dimming the whole row to 0.45 took the badge's
+                own label down to 3.9:1 on the dark ground and 3.0:1 on the
+                light one — under the AA floor, to say something the hollow
+                block and the word LOCKED already say. */}
+            <div style={S.badge}>
               <span
                 style={{
                   ...S.badgeBlock,
@@ -88,7 +80,11 @@ export default function More() {
                   borderColor: badge.earned ? 'var(--accent)' : 'var(--border)'
                 }}
               />
-              <span style={S.badgeLabel}>{badge.label}</span>
+              <span
+                style={{ ...S.badgeLabel, color: badge.earned ? 'var(--text)' : 'var(--textDim)' }}
+              >
+                {badge.label}
+              </span>
               <Data style={S.badgeState}>{badge.earned ? 'Earned' : 'Locked'}</Data>
             </div>
           </div>
@@ -99,36 +95,6 @@ export default function More() {
 }
 
 const S = {
-  heroTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' },
-  heroLabel: {
-    fontSize: 'var(--fs-2xs)',
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    color: 'var(--textMuted)'
-  },
-  heroBadges: {
-    fontSize: 'var(--fs-2xs)',
-    letterSpacing: '0.1em',
-    textTransform: 'uppercase',
-    color: 'var(--textDim)'
-  },
-  heroLevel: {
-    fontFamily: 'var(--font-mono)',
-    fontSize: 'var(--fs-3xl)',
-    fontWeight: 800,
-    fontStretch: '78%',
-    letterSpacing: '0.02em',
-    lineHeight: 1,
-    margin: '6px 0 12px'
-  },
-  heroSub: {
-    display: 'block',
-    marginTop: 8,
-    fontSize: 'var(--fs-3xs)',
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    color: 'var(--textMuted)'
-  },
   link: {
     display: 'flex',
     alignItems: 'center',

@@ -12,12 +12,20 @@
 //
 // They are fills, never text, and every one clears the 3:1 non-text floor
 // against BOTH grounds. That double constraint pins them into a narrow
-// mid-luminance band (0.11–0.23 relative luminance), which is why there is no
+// mid-luminance band (0.11–0.24 relative luminance), which is why there is no
 // bone-white or bright-yellow category here: either would vanish on paper.
-// Eight distinct hues so a strip stays readable as a code; a label always
+// Eight distinct hues so a set stays readable as a code; a label always
 // accompanies the colour, so hue is never the sole carrier.
+//
+// Fitness used to be `#d8232a`, 8° away from `--danger`. That made red mean
+// three unrelated things at once — relapse, destructive action, and *fitness* —
+// so a kept vow and a finished workout both read as failure. It moved to 96°,
+// the middle of the only wide gap left in the wheel (social 44° → health 161°),
+// which puts it 52° from its nearest neighbour. Amber was the obvious warm
+// alternative and is the wrong one: it lands at ~39°, i.e. 5° from social and
+// 13° from creative.
 export const CATEGORY_COLORS = {
-  fitness: '#d8232a',
+  fitness: '#4f9420',
   education: '#3a67c0',
   health: '#1c8f6a',
   productivity: '#6a4bc4',

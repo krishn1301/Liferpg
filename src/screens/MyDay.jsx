@@ -322,5 +322,5 @@ const S = {
     fontSize: 'var(--fs-xs)',
     fontWeight: 700
   },
-  warn: { fontSize: 'var(--fs-sm)', color: 'var(--warn)', marginTop: 8 }
+  warn: { fontSize: 'var(--fs-sm)', color: 'var(--danger)', marginTop: 8 }
 }

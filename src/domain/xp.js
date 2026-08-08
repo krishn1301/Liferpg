@@ -41,6 +41,29 @@ export function levelFromXp(xp) {
   return { level, current: remaining, needed: levelCost(level) }
 }
 
+/**
+ * Everything any screen needs to talk about XP, from one place.
+ *
+ * There used to be four sentences for the same two numbers — Today said
+ * "130 XP" and "90 XP to level 2", More said "Level 2 · 130 XP" and
+ * "30 / 200 to level 3", Status said "130 XP banked". Two of those are lifetime
+ * and two are within-level, both are arithmetically right, and nothing on
+ * screen distinguished them, so the pair read as a bug.
+ *
+ * One frame now: **progress is always `current / needed` within the level, and
+ * a lifetime figure is always labelled TOTAL.** Both come from here so they
+ * cannot drift apart again.
+ *
+ * `todayKey` is not optional. Two callers used to omit it, which handed
+ * `cleanDaysTotal` an undefined "today" and quietly gave vow owners a different
+ * level on More than on Today.
+ */
+export function xpSummary(habits, todayKey) {
+  const total = totalXp(habits, todayKey)
+  const { level, current, needed } = levelFromXp(total)
+  return { total, level, current, needed, remaining: needed - current }
+}
+
 export const BADGES = [
   { id: 'week-warrior', icon: '🔥', label: 'Week Warrior', desc: '7-day streak' },
   { id: 'diamond', icon: '💎', label: 'Diamond Habit', desc: '30-day streak' },
@@ -87,4 +110,46 @@ export function earnedBadges(habits, todayKey) {
   }
 
   return BADGES.map((badge) => ({ ...badge, earned: Boolean(unlocked[badge.id]) }))
+}
+
+/**
+ * Badge ids from easiest to hardest, which is *not* the order `BADGES` is
+ * declared in — that one is display order and exists to make the grid read
+ * well. Ranking has to be stated separately, or "the highest badge you hold"
+ * silently becomes "whichever happens to be last in the array".
+ *
+ * The ordering is by what each actually costs: five habits is a setup step, a
+ * perfect day is available on day one, 100 XP is ten completions, a 7-day
+ * streak needs a week of not missing, 100 completions is about a month at
+ * three a day, and a 30-day streak is the only one you cannot rush.
+ */
+export const TITLE_RANK = [
+  'master',
+  'perfect-day',
+  'centurion',
+  'week-warrior',
+  'century',
+  'diamond'
+]
+
+/**
+ * The strongest badge currently held, as a title.
+ *
+ * `perfect-day` un-earns itself the next morning, so a title can be lost — that
+ * is honest. It reflects where you are, not a trophy cabinet, and the cabinet
+ * is already on screen twelve rows below this.
+ */
+export function highestTitle(habits, todayKey) {
+  const earned = new Set(
+    earnedBadges(habits, todayKey)
+      .filter((b) => b.earned)
+      .map((b) => b.id)
+  )
+
+  for (let i = TITLE_RANK.length - 1; i >= 0; i--) {
+    if (earned.has(TITLE_RANK[i])) {
+      return BADGES.find((b) => b.id === TITLE_RANK[i]).label
+    }
+  }
+  return 'Unranked'
 }
