@@ -10,6 +10,7 @@ import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -46,14 +47,16 @@ public class StepCounterPlugin extends Plugin {
     /**
      * How long to wait for the sensor to report.
      *
-     * TYPE_STEP_COUNTER is an on-change sensor: registering a listener normally
-     * delivers the current value almost immediately, but "almost" is not
-     * "always" — if the hardware has nothing cached the first event can wait for
-     * an actual step. Resolving with `available: false` beats hanging the caller
-     * forever, and the JavaScript side treats a timeout the same as a missing
-     * sensor.
+     * The fallback, not the mechanism — `flush` below is what actually makes a
+     * stationary phone answer. This only covers the case where the sensor stays
+     * silent anyway, because resolving with `available: false` beats hanging the
+     * caller forever. The JavaScript side treats a timeout exactly like a
+     * missing sensor: leave the number alone, never write a zero.
      */
-    private static final long READ_TIMEOUT_MS = 2500;
+    private static final long READ_TIMEOUT_MS = 4000;
+
+    /** Tagged so a failed read can be told apart from a read of zero. */
+    private static final String TAG = "LifeRPGSteps";
 
     /** Below API 29 the permission does not exist and is granted implicitly. */
     private boolean needsRuntimePermission() {
@@ -118,6 +121,17 @@ public class StepCounterPlugin extends Plugin {
         OneShotRead listener = new OneShotRead(sm, handler, call);
 
         sm.registerListener(listener, counter(), SensorManager.SENSOR_DELAY_FASTEST);
+
+        // The step counter batches. Samsung's especially: it holds readings in a
+        // hardware FIFO and delivers them in bursts to avoid waking the CPU for
+        // every footfall, which means a phone sitting still can register a
+        // listener and hear nothing at all. Found exactly that way — the first
+        // build read nothing on a stationary desk. `flush` empties the FIFO now
+        // and delivers what is in it, which is the difference between a step
+        // count that appears when you open the app and one that appears
+        // whenever the hardware next feels like it.
+        sm.flush(listener);
+
         handler.postDelayed(listener::giveUp, READ_TIMEOUT_MS);
     }
 
@@ -154,6 +168,7 @@ public class StepCounterPlugin extends Plugin {
             // float in the API, integral in fact — the sensor counts whole
             // steps and the fractional part is always zero.
             out.put("sinceBoot", (long) event.values[0]);
+            Log.d(TAG, "read " + (long) event.values[0] + " steps since boot");
             call.resolve(out);
         }
 
@@ -168,6 +183,7 @@ public class StepCounterPlugin extends Plugin {
             JSObject out = new JSObject();
             out.put("available", false);
             out.put("granted", true);
+            Log.w(TAG, "sensor reported nothing before the timeout");
             call.resolve(out);
         }
     }
