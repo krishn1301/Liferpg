@@ -12,7 +12,11 @@ import { LOG_SCALE } from './constants'
 // Averaging an unlogged day as a mood of 0 would let a fortnight of not
 // bothering read as the worst fortnight on record.
 
-const EMPTY = { mood: null, energy: null, water: 0, note: '' }
+// `steps` is null rather than 0 when absent, and water is 0. The difference is
+// not an inconsistency: a day with no water entry genuinely is a day of no
+// water, but a day with no step reading is a day the counter was never asked,
+// which is not the same as a day of sitting still.
+const EMPTY = { mood: null, energy: null, water: 0, note: '', steps: null }
 
 /** Clamp to the 1..5 scale, or null. Anything unparseable becomes null. */
 function scalePoint(value) {
@@ -30,14 +34,17 @@ export function logFor(dailyLogs, dateKey) {
     mood: scalePoint(log.mood),
     energy: scalePoint(log.energy),
     water: Math.max(0, Math.round(Number(log.water) || 0)),
-    note: typeof log.note === 'string' ? log.note : ''
+    note: typeof log.note === 'string' ? log.note : '',
+    steps: typeof log.steps === 'number' ? Math.max(0, Math.round(log.steps)) : null
   }
 }
 
 /** Is there anything on this day worth showing? */
 export function hasLog(dailyLogs, dateKey) {
-  const { mood, energy, water, note } = logFor(dailyLogs, dateKey)
-  return mood !== null || energy !== null || water > 0 || note.trim().length > 0
+  const { mood, energy, water, note, steps } = logFor(dailyLogs, dateKey)
+  // A step count counts even at zero: unlike the others it is not something the
+  // user forgot to fill in, it is something the phone recorded.
+  return mood !== null || energy !== null || water > 0 || note.trim().length > 0 || steps !== null
 }
 
 /** Every day in the range, oldest first, for plotting. */

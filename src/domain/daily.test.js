@@ -20,8 +20,9 @@ const habit = (over = {}) => ({
 
 describe('logFor', () => {
   it('fills in every field for a day nobody touched', () => {
-    expect(logFor({}, MON)).toEqual({ mood: null, energy: null, water: 0, note: '' })
-    expect(logFor(undefined, MON)).toEqual({ mood: null, energy: null, water: 0, note: '' })
+    const empty = { mood: null, energy: null, water: 0, note: '', steps: null }
+    expect(logFor({}, MON)).toEqual(empty)
+    expect(logFor(undefined, MON)).toEqual(empty)
   })
 
   it('leaves the medicine bag it shares the day with alone', () => {
@@ -131,5 +132,30 @@ describe('moodByCompletion', () => {
       other: null,
       otherDays: 0
     })
+  })
+})
+
+describe('steps in the log', () => {
+  // Steps were being written to dailyLogs and then silently dropped here,
+  // because logFor rebuilds the day from a fixed list of fields. The count was
+  // stored correctly and never once reached the screen.
+  it('survives the round trip out of storage', () => {
+    expect(logFor({ '2026-08-09': { steps: 8412 } }, '2026-08-09').steps).toBe(8412)
+  })
+
+  it('is null when the counter was never read, not zero', () => {
+    // A day with no reading is a day nobody asked the sensor — not a day of
+    // sitting still, which is what a zero would claim.
+    expect(logFor({}, '2026-08-09').steps).toBe(null)
+    expect(logFor({ '2026-08-09': { water: 3 } }, '2026-08-09').steps).toBe(null)
+  })
+
+  it('keeps a recorded zero distinct from no reading', () => {
+    expect(logFor({ '2026-08-09': { steps: 0 } }, '2026-08-09').steps).toBe(0)
+  })
+
+  it('makes a day with only steps count as logged', () => {
+    expect(hasLog({ '2026-08-09': { steps: 0 } }, '2026-08-09')).toBe(true)
+    expect(hasLog({}, '2026-08-09')).toBe(false)
   })
 })
