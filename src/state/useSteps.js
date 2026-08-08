@@ -67,12 +67,17 @@ export function useSteps(doc, ready, dispatch) {
       if (cancelled || sinceBoot === null) return
 
       const { doc: current, today: day } = latest.current
-      const banked = current.dailyLogs?.[day]?.steps ?? 0
+      // Raw, so that "no steps field yet" stays distinguishable from "zero
+      // steps so far". Collapsing the two meant the very first sample of a day
+      // computed 0, compared 0 to 0, wrote nothing, and left someone who had
+      // just switched steps on staring at a log with no step row in it.
+      const recorded = current.dailyLogs?.[day]?.steps
+      const banked = recorded ?? 0
       const { baseline, steps } = fold(current.settings?.stepBaseline, day, sinceBoot, banked)
 
-      // Only write when something moved. Without this the autosave fires on
-      // every resume, rewriting the whole document to store an identical number.
-      if (steps !== banked) {
+      // Otherwise the autosave fires on every resume, rewriting the whole
+      // document to store a number it already had.
+      if (steps !== recorded) {
         dispatch({ type: 'log/set', dateKey: day, field: 'steps', value: steps })
         completeCrossedGoals(current, day, banked, steps, dispatch)
       }
