@@ -7,7 +7,7 @@ import { requestPersistentStorage } from './platform/device'
 import BottomTabs, { TABS } from './components/BottomTabs'
 import { CatalogCard } from './components/catalog'
 import { useToday } from './state/useToday'
-import { totalXp, levelFromXp, earnedBadges } from './domain/xp'
+import { xpSummary, earnedBadges } from './domain/xp'
 import Today from './screens/Today'
 import Habits from './screens/Habits'
 import Stats from './screens/Stats'
@@ -104,7 +104,10 @@ function Rewards() {
 
   return (
     <CatalogCard
-      level={levelFromXp(totalXp(doc.habits)).level}
+      // `today` matters here. Without it a vow's clean-day count is measured
+      // against an undefined date, so this card could compute a different level
+      // from the one Today is showing and fire the wrong celebration.
+      level={xpSummary(doc.habits, today).level}
       badgeCount={badges.filter((b) => b.earned).length}
       badges={badges}
     />

@@ -33,8 +33,11 @@
   /* SIGNAL. The one chromatic accent in the chrome: what is live, next, or
      just earned. Everything else is ink. */
   --accent: #4da6ff; /* 7.2:1 on --panel */
-  --danger: #ff5570; /* 6.0:1 — CAUTION, relapses, destructive actions */
-  --warn: #4da6ff;
+  /* CAUTION, relapses, destructive actions, and failed validation. There was a
+     `--warn` here too, defined as an exact alias of --accent, which made a
+     warning indistinguishable from "this is live". Its two consumers were both
+     form errors, so they say --danger now and the role is gone. */
+  --danger: #ff5570; /* 6.0:1 on --panel */
   --onAccent: #05070d; /* 7.9:1 on --accent */
   /* Text on an inverted row — the completion state fills with --text. */
   --onInk: #05070d; /* 16.4:1 on --text */
@@ -90,6 +93,16 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
+  /* What a screen must leave clear at the bottom. The dock covers
+     `--tab-height` plus the bar's own 4px padding and 1px border top and
+     bottom, plus a 10px gutter under it — 74px — and then the safe inset.
+     `Screen` used to spell this as `--tab-height + 40px`, which happened to
+     land 20px clear and gave no clue what the 40 was for. Stated once, here,
+     so the two can never drift apart. */
+  --dock-gutter: 10px; /* the float: gap between the bar and the screen edge */
+  --dock-height: calc(var(--tab-height) + 10px + var(--dock-gutter));
+  --dock-clearance: calc(var(--dock-height) + var(--safe-bottom) + 24px);
+
   color-scheme: dark;
 }
 
@@ -116,7 +129,6 @@
      as text there; the role survives, the value cannot. */
   --accent: #1d4ed8; /* 6.7:1 */
   --danger: #c02a3e; /* 5.8:1 */
-  --warn: #1d4ed8;
   --onAccent: #eef3f9; /* 6.0:1 on --accent */
   --onInk: #eef3f9; /* 17.0:1 on --text */
 

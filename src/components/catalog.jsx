@@ -65,18 +65,26 @@ export function vowStripDays(habit, todayKey, n = 7) {
  *   centre dot     not scheduled
  *
  * State is carried by *shape* first and hue second, so the strip survives
- * colour blindness, a greyscale screenshot, and the light theme. Colour says
- * which category; shape says what happened.
+ * colour blindness, a greyscale screenshot, and the light theme. Shape says
+ * what happened; the strip is otherwise monochrome.
  *
- * A day may override the strip's colour (`d.color`) — the one use is a vow's
- * relapse day, which is pressed in `--danger`. That is a hue-only distinction,
- * so it is never the sole carrier of meaning: the row spells out the run length
- * in words beside it, and the spoken summary counts the slips.
+ * It used to paint a done day in the habit's category colour. That gave red one
+ * meaning too many — `--danger` marks a relapse, and `cat-fitness` was a near
+ * red, so a *completed* fitness habit and a *broken* vow rendered as the same
+ * wall of red blocks. The strip now reads as state alone, in SIGNAL blue, and
+ * category is carried by the `{cat.label}` line directly above it on every row
+ * that draws a strip.
+ *
+ * A day may still override the fill (`d.color`) — the one use is a vow's
+ * relapse day, pressed in `--danger`. With everything else monochrome that is
+ * now the only hue a strip can contain, which is the point. It is still never
+ * the sole carrier: the row spells out the run length in words beside it, and
+ * the spoken summary counts the slips.
  *
  * The whole strip is one `img` with a spoken summary — seven separate blocks
  * announced individually is noise, not information.
  */
-export function CodeStrip({ days, color, size = 11, gap = 3, label }) {
+export function CodeStrip({ days, size = 11, gap = 3, label }) {
   const done = days.filter((d) => d.state === 'done').length
   const missed = days.filter((d) => d.state === 'missed').length
   const skipped = days.filter((d) => d.state === 'skip').length
@@ -91,7 +99,7 @@ export function CodeStrip({ days, color, size = 11, gap = 3, label }) {
   return (
     <span style={{ display: 'inline-flex', gap }} role="img" aria-label={summary}>
       {days.map((d) => {
-        const fill = d.color ?? color
+        const fill = d.color ?? 'var(--accent)'
         return (
           <span
             key={d.key}

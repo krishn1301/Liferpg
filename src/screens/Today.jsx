@@ -6,7 +6,7 @@ import { dueToday, currentStreak, activeHabits } from '../domain/streaks'
 import { describeSchedule, completionsThisWeek } from '../domain/schedule'
 import { isVow, cleanStreak } from '../domain/quit'
 import { categoryOf } from '../domain/constants'
-import { totalXp, levelFromXp } from '../domain/xp'
+import { xpSummary } from '../domain/xp'
 import { fromDateKey } from '../domain/dates'
 import { tap } from '../platform/haptics'
 import {
@@ -32,10 +32,13 @@ export default function Today() {
   const habits = useMemo(() => dueToday(doc.habits, today), [doc.habits, today])
   const vows = useMemo(() => activeHabits(doc.habits).filter(isVow), [doc.habits])
   const done = habits.filter((h) => h.completions?.[today]).length
-  const xp = totalXp(doc.habits, today)
-  const level = levelFromXp(xp)
+  const nextUp = habits.find((h) => !h.completions?.[today])
+  const xp = xpSummary(doc.habits, today)
 
-  const [relapsing, setRelapsing] = useState(false)
+  // The id of the vow whose relapse is being recorded, or null. It used to be a
+  // boolean behind a single button in the Vows header; the control lives on the
+  // rows now, so opening the sheet already names a vow.
+  const [relapsing, setRelapsing] = useState(null)
 
   const dateLabel = fromDateKey(today).toLocaleDateString(undefined, {
     weekday: 'long',
@@ -56,17 +59,21 @@ export default function Today() {
         <div style={S.levelBlock}>
           <div style={S.levelHead}>
             <Data style={S.levelLabel}>Level</Data>
-            <Data style={S.xpText}>{xp} XP</Data>
+            <Data style={S.xpText}>Total {xp.total} XP</Data>
           </div>
           <div className="glow" style={S.levelNumber}>
-            {String(level.level).padStart(2, '0')}
+            {String(xp.level).padStart(2, '0')}
           </div>
           <TickScale
-            value={level.current / level.needed}
-            label={`Level ${level.level}, ${level.current} of ${level.needed} XP to level ${level.level + 1}`}
+            value={xp.current / xp.needed}
+            label={`Level ${xp.level}, ${xp.current} of ${xp.needed} XP to level ${xp.level + 1}`}
           />
+          {/* Same sentence as everywhere else. The scale above is within-level,
+              so the caption under it has to be too — this used to count down
+              the remainder while More counted up the progress, from the same
+              two numbers. */}
           <Data style={S.levelSub}>
-            {level.needed - level.current} XP to level {level.level + 1}
+            {xp.current} / {xp.needed} XP to level {xp.level + 1}
           </Data>
         </div>
 
@@ -85,7 +92,6 @@ export default function Today() {
                   key: h.id,
                   state: h.completions?.[today] ? 'done' : 'missed'
                 }))}
-                color="var(--accent)"
                 label={`${done} of ${habits.length} quests done today`}
               />
               <Data style={S.dayCount}>
@@ -135,6 +141,10 @@ export default function Today() {
               habit={habit}
               questNumber={doc.habits.findIndex((h) => h.id === habit.id) + 1}
               today={today}
+              // The first thing still outstanding, and the only row that gets
+              // the live edge. Computed here rather than in the row because a
+              // row cannot see its siblings.
+              isNext={habit.id === nextUp?.id}
               onToggle={() => toggle(habit)}
             />
           ))}
@@ -143,16 +153,11 @@ export default function Today() {
 
       {vows.length > 0 && (
         <>
-          <div style={S.vowHead}>
-            <Overline style={{ margin: 0 }}>Vows</Overline>
-            <button onClick={() => setRelapsing(true)} style={S.relapseBtn}>
-              Relapse
-            </button>
-          </div>
+          <Overline>Vows</Overline>
 
           <div style={S.list}>
             {vows.map((vow) => (
-              <VowRow key={vow.id} vow={vow} today={today} />
+              <VowRow key={vow.id} vow={vow} today={today} onRelapse={() => setRelapsing(vow.id)} />
             ))}
           </div>
         </>
@@ -170,11 +175,15 @@ export default function Today() {
         <RelapseSheet
           vows={vows}
           today={today}
-          onClose={() => setRelapsing(false)}
+          // The vow whose row was tapped starts picked, so the common case is
+          // one tap to open and one to confirm. The sheet stays multi-select —
+          // see its own note on why.
+          initial={relapsing}
+          onClose={() => setRelapsing(null)}
           onConfirm={(ids, dateKey) => {
             tap('heavy')
             dispatch({ type: 'habit/relapse', ids, dateKey })
-            setRelapsing(false)
+            setRelapsing(null)
           }}
         />
       )}
@@ -187,7 +196,7 @@ export default function Today() {
  * looks like the completion box but resets a streak instead is the one mis-tap
  * this screen cannot afford.
  */
-function VowRow({ vow, today }) {
+function VowRow({ vow, today, onRelapse }) {
   const cat = categoryOf(vow.category)
   const streak = cleanStreak(vow, today)
 
@@ -205,12 +214,20 @@ function VowRow({ vow, today }) {
           <div style={{ marginTop: 9 }}>
             <CodeStrip
               days={vowStripDays(vow, today)}
-              color={cat.color}
               label={`${vow.name}: ${streak} days clean`}
             />
           </div>
         </div>
-        <Data style={S.vowCount}>{streak}</Data>
+        <div style={S.vowSide}>
+          <Data style={S.vowCount}>{streak}</Data>
+          {/* Text, not an outlined DANGER pill in the section header. It used to
+              be the loudest control in its section and the first thing the eye
+              found above a list of streaks, which is the wrong thing to
+              advertise. Still two taps, and still full-size to the thumb. */}
+          <button onClick={onRelapse} style={S.relapseBtn}>
+            Relapse
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -224,8 +241,8 @@ function VowRow({ vow, today }) {
  * punishment the app has no business handing out. The date is editable: nobody
  * reaches for a habit tracker in the middle of it.
  */
-function RelapseSheet({ vows, today, onClose, onConfirm }) {
-  const [picked, setPicked] = useState([])
+function RelapseSheet({ vows, today, initial, onClose, onConfirm }) {
+  const [picked, setPicked] = useState(initial ? [initial] : [])
   const [dateKey, setDateKey] = useState(today)
 
   const toggle = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
@@ -299,7 +316,7 @@ function RelapseSheet({ vows, today, onClose, onConfirm }) {
   )
 }
 
-function HabitRow({ habit, questNumber, today, onToggle }) {
+function HabitRow({ habit, questNumber, today, isNext, onToggle }) {
   const cat = categoryOf(habit.category)
   const isDone = Boolean(habit.completions?.[today])
   const { streak } = currentStreak(habit, today)
@@ -308,6 +325,11 @@ function HabitRow({ habit, questNumber, today, onToggle }) {
   // The sweep fires on a real completion and nowhere else — not on mount, not
   // on un-completing, not when the list re-renders. An animation that plays
   // when you undo something is telling you a lie about what happened.
+  //
+  // It doubles as the timer for the two-phase done state below: while it runs
+  // the row is inverted, and when it ends the row settles. A row that is
+  // already done when it mounts never sets this, so it renders settled with no
+  // flash of celebration for something you finished yesterday.
   const [sweeping, setSweeping] = useState(false)
 
   const meta = weekly
@@ -319,8 +341,22 @@ function HabitRow({ habit, questNumber, today, onToggle }) {
     onToggle()
   }
 
+  // Three states, not two. Inversion is the *moment* of completion and it
+  // stays — it is the reward. But leaving the row inverted made every finished
+  // habit the brightest object on the screen, so a day with three of five done
+  // showed you the three you had already dealt with. Today's job is what is
+  // left, so the row settles onto the ground once the sweep is over: still
+  // legibly done, no longer shouting.
+  const settled = isDone && !sweeping
+  const rowState = !isDone ? null : sweeping ? S.rowFlash : S.rowDone
+
   return (
-    <div style={{ ...S.row, ...(isDone ? S.rowDone : null) }}>
+    <div
+      // Only the next thing outstanding is lit. `.glow-edge` is inert in
+      // daylight, so this costs nothing there.
+      className={isNext ? 'glow-edge' : undefined}
+      style={{ ...S.row, ...rowState }}
+    >
       {sweeping && (
         <span
           className="sweep-off"
@@ -335,14 +371,14 @@ function HabitRow({ habit, questNumber, today, onToggle }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={S.rowTop}>
             <span style={S.rowName}>{habit.name}</span>
-            <QuestNumber n={questNumber} style={isDone ? S.questDone : null} />
+            <QuestNumber n={questNumber} style={isDone && !settled ? S.questDone : null} />
           </div>
-          <div style={S.rowMeta}>
+          <div style={{ ...S.rowMeta, ...(settled ? S.rowMetaSettled : null) }}>
             {cat.label} · {meta}
             {streak > 0 && ` · run ${streak}`}
           </div>
           <div style={{ marginTop: 9 }}>
-            <CodeStrip days={stripDays(habit, today)} color={cat.color} />
+            <CodeStrip days={stripDays(habit, today)} />
           </div>
         </div>
 
@@ -428,34 +464,33 @@ const S = {
     color: 'var(--danger)'
   },
   list: { display: 'flex', flexDirection: 'column', gap: 8 },
-  vowHead: {
+  // The vow row's trailing column: the day count, and the way out under it.
+  vowSide: {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    margin: '28px 0 10px'
+    flexShrink: 0
   },
-  // Outlined, not filled. It is a destructive action and it belongs to the
-  // section header, not to the page — a solid DANGER button sitting above a
-  // list of streaks reads as the thing you are meant to press next.
+  // Text, and muted. It was a --danger-outlined pill in the section header,
+  // which the global 48dp floor turned into a 48px-tall control next to a 10px
+  // label — the biggest, reddest thing on a screen otherwise reporting how long
+  // you have held on. It keeps the full 48dp target because it is still a real
+  // control on a phone; it just stops advertising.
   relapseBtn: {
-    border: '1px solid var(--danger)',
-    borderRadius: 'var(--radius-pill)',
-    color: 'var(--danger)',
+    color: 'var(--textMuted)',
     fontFamily: 'var(--font-mono)',
-    fontSize: 'var(--fs-2xs)',
+    fontSize: 'var(--fs-3xs)',
     fontWeight: 600,
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
-    padding: '0 16px'
+    padding: '0 6px'
   },
   vowCount: {
     fontSize: 'var(--fs-xl)',
     fontWeight: 700,
     color: 'var(--textDim)',
     flexShrink: 0,
-    alignSelf: 'center',
-    paddingRight: 6
+    lineHeight: 1
   },
   pickList: { display: 'flex', flexDirection: 'column', gap: 6 },
   pickRow: {
@@ -491,11 +526,28 @@ const S = {
     background: 'var(--panel)',
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius)',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    // The settle, below. Only the two painted properties move, and both are
+    // killed by the global reduced-motion rule.
+    transition: 'background-color 220ms ease, border-color 220ms ease, color 220ms ease'
   },
-  // Committed state: the record is pressed. Same inversion as a primary button
-  // and the selected tab — see DESIGN.md.
-  rowDone: { background: 'var(--text)', color: 'var(--onInk)', borderColor: 'var(--text)' },
+  // The moment of completion: the record is pressed. Same inversion as a
+  // primary button and the selected tab — see DESIGN.md. It lasts as long as
+  // the sweep and no longer.
+  rowFlash: { background: 'var(--text)', color: 'var(--onInk)', borderColor: 'var(--text)' },
+  // Where the row lands. Done is a settled fact, not an ongoing announcement,
+  // so it recedes to the page's own ground and keeps only a decorative
+  // hairline. What is left over stays on --panel and holds the eye.
+  //
+  // --textDim, not --textMuted: muted is specified against --panel and drops to
+  // 4.35:1 on --bg in daylight, under the AA floor. Dim measures 8.3:1 dark and
+  // 6.9:1 light here. The meta line gives up colour as its way of being
+  // subordinate and keeps size instead.
+  rowDone: {
+    background: 'var(--bg)',
+    color: 'var(--textDim)',
+    borderColor: 'var(--rule)'
+  },
   // The sweep is the row's *previous* ground travelling off it, so it has to be
   // the panel fill now, not the page black — otherwise finishing a habit flashes
   // a dark band that was never there.
@@ -541,6 +593,10 @@ const S = {
     opacity: 0.62,
     marginTop: 5
   },
+  // 0.62 was measured against --panel and PULSE. The settled row sits on --bg
+  // with currentColor already at --textDim, and dimming that again lands near
+  // 3:1. Full strength here; the size difference still ranks it below the name.
+  rowMetaSettled: { opacity: 1 },
   check: {
     // The single most-tapped control in the app — it gets the full 48dp box.
     width: 'var(--touch)',

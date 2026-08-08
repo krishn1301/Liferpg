@@ -230,7 +230,10 @@ export default function Stats() {
         {badges.map((badge, i) => (
           <div key={badge.id}>
             {i > 0 && <Rule />}
-            <div style={{ ...S.badge, opacity: badge.earned ? 1 : 0.45 }}>
+            {/* No row opacity. Dimming the whole row to 0.45 took the label
+                down to 3.9:1 dark and 3.0:1 light, under the AA floor, to
+                restate what the hollow block and the word LOCKED already say. */}
+            <div style={S.badge}>
               {/* Earned reads as a pressed block, unearned as an empty one —
                   the same alphabet as every code strip in the app. */}
               <span
@@ -241,7 +244,14 @@ export default function Stats() {
                 }}
               />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={S.badgeLabel}>{badge.label}</div>
+                <div
+                  style={{
+                    ...S.badgeLabel,
+                    color: badge.earned ? 'var(--text)' : 'var(--textDim)'
+                  }}
+                >
+                  {badge.label}
+                </div>
                 <div style={S.badgeDesc}>{badge.desc}</div>
               </div>
               <Data style={S.badgeState}>{badge.earned ? 'Earned' : 'Locked'}</Data>

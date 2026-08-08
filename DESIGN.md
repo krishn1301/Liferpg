@@ -1,6 +1,6 @@
 ---
 name: LifeRPG
-description: A habit tracker set as a game System overlay. Near-black ground with a blue cast, SIGNAL blue for what is live, terminal monospace throughout, and a colour-code strip that encodes a week at a glance. Containers are rounded and filled; the data marks inside them stay square. Completion is an inversion, not a tick. Phone-first — every rule assumes a thumb, a 411px viewport and no mouse.
+description: A habit tracker set as a game System overlay. Near-black ground with a blue cast, SIGNAL blue for what is live, terminal monospace throughout, and a monochrome code strip that encodes a week at a glance. Containers are rounded and filled; the data marks inside them stay square. Completion inverts the row, then settles onto the ground so that what is left holds the eye. Phone-first — every rule assumes a thumb, a 411px viewport and no mouse.
 
 # The source of truth for colour, type and radius is src/theme/global.css.
 # This frontmatter is the portable export the detector reads. If a token
@@ -23,8 +23,7 @@ colors:
   text-dim: '#8fa9c4' # 7.6:1
   text-muted: '#6b83a0' # 4.7:1 — the least headroom in the palette; 4.5 is the floor
   accent: '#4da6ff' # SIGNAL — what is live, next, or just earned
-  danger: '#ff5570' # 6.0:1 — CAUTION, relapses, destructive actions
-  warn: '#4da6ff'
+  danger: '#ff5570' # 6.0:1 — CAUTION, relapses, destructive, failed validation
   on-accent: '#05070d'
   on-ink: '#05070d' # text drawn on an inverted (GLASS-filled) row
 
@@ -43,16 +42,17 @@ colors:
   light-text-muted: '#5a748f' # 4.9:1
   light-accent: '#1d4ed8' # SIGNAL translated: #4da6ff is ~2:1 on white
   light-danger: '#c02a3e'
-  light-warn: '#1d4ed8'
   light-on-accent: '#eef3f9'
   light-on-ink: '#eef3f9'
 
   # ---- Category block colours. -----------------------------------------
-  # Fills in a code strip, never text. Every one clears 3:1 against BOTH
-  # grounds, which is why they sit in a narrow mid-luminance band — a
-  # bone-white or a bright yellow disappears on paper. Eight distinct hues
-  # so the strip is readable as a code; always paired with a text label.
-  cat-fitness: '#d8232a'
+  # Fills, never text. Every one clears 3:1 against BOTH grounds, which is
+  # why they sit in a narrow mid-luminance band — a bone-white or a bright
+  # yellow disappears on paper. Eight distinct hues, always paired with a
+  # text label. They appear on the Stats bars, the Status marks, the My Day
+  # blocks and the Excel export — no longer in the code strip, which went
+  # monochrome so that red could go back to meaning one thing.
+  cat-fitness: '#4f9420' # hue 96° — was #d8232a, 8° from danger
   cat-education: '#3a67c0'
   cat-health: '#1c8f6a'
   cat-productivity: '#6a4bc4'
@@ -131,7 +131,7 @@ spacing:
 
 ## The world
 
-**The System.** The status overlay from *Solo Leveling*: a near-black field
+**The System.** The status overlay from _Solo Leveling_: a near-black field
 with a blue cast, terminal monospace throughout, thin bright rules bracketing
 every heading, values stated in brackets, and one electric blue marking what is
 live. The window is lit from inside — that is a halo, not a shadow, and it is
@@ -139,7 +139,7 @@ the only lighting effect this design has.
 
 The world changed once before, from Factory Records catalogue sleeves. What
 survived the move is everything that was actually load-bearing: the code strip,
-inversion as completion, and colour used as an *encoding system* rather than
+inversion as completion, and colour used as an _encoding system_ rather than
 decoration. Those were never Saville's — they are what a **log of small verified
 events** needs, and they fit a status window as well as they fit a record sleeve.
 
@@ -154,8 +154,11 @@ them native rather than bolted on, because it is the same fiction:
   **CAUTION** line beneath while anything is open.
 - **XP** is a banked count. **Levels** are a graduated tick scale, read like an
   instrument, not a bubbly bar.
-- **STATUS** is the character sheet: level, JOB, TITLE and one stat per
-  category, every number derived from real completions.
+- **STATUS** is the character sheet: level, TITLE and one stat per category,
+  every number derived from real completions. TITLE is the highest badge held —
+  it used to be the strongest category, which printed a category name as though
+  it were an achievement. There was a JOB row too, hardcoded to "Human"; a
+  constant is not content, and it was occupying the best space on the screen.
 - A **streak** is an unbroken run of blocks in the code strip.
 
 **What the System does not get is teeth.** The source material punishes a failed
@@ -170,20 +173,35 @@ Nothing below is optional garnish. Strip these and this is a black theme, not
 a world.
 
 1. **The code strip.** A run of small blocks reading left→right over the last
-   seven days. Solid block = done, hollow outline = missed, single centre dot =
-   not scheduled. Colour is the habit's category. It replaces both the old
-   3px side stripe and the progress ring, and it is shape-encoded as well as
-   hue-encoded, so it survives colour blindness and a greyscale screenshot.
+   seven days. Solid block = done, hollow outline = missed, centre bar =
+   skipped on purpose, single centre dot = not scheduled. It replaces both the
+   old 3px side stripe and the progress ring. State is carried by _shape_, so
+   the strip survives colour blindness and a greyscale screenshot.
+
+   It is monochrome — SIGNAL blue for a pressed day, hairlines for everything
+   else. It used to paint a done day in the habit's category colour, and that
+   gave red one job too many: `--danger` marks a relapse, `cat-fitness` was a
+   near red, and so a _completed_ workout and a _broken_ vow rendered as the
+   same wall of red. The only hue a strip can now contain is the `--danger` of
+   an actual relapse day.
+
 2. **The pulsar plot.** Stacked ridgelines, one per week, occluding each other
-   front-to-back — the *Unknown Pleasures* mechanic, which is a real plot of
+   front-to-back — the _Unknown Pleasures_ mechanic, which is a real plot of
    real data and not an ornament. It is the Stats hero and the history view.
    Each ridge is that week's completions by weekday; a good month has tall,
    even ridges. Filled with the ground colour so the ridges genuinely hide
    what is behind them.
-3. **Inversion as completion.** A finished habit does not gain a green tick;
-   the whole row **flips to GLASS ground with VOID text**. It is the strongest
-   done/not-done signal available at 7am with one eye open, and it is what a
-   System window does when a goal is met.
+3. **Inversion as completion, then a settle.** A finished habit does not gain a
+   green tick; the whole row **flips to GLASS ground with VOID text**. It is the
+   strongest done/not-done signal available at 7am with one eye open, and it is
+   what a System window does when a goal is met.
+
+   It does not stay that way. GLASS is the brightest value in the palette, so
+   leaving finished rows inverted made a day with three of five done shout about
+   the three you had already dealt with. When the sweep ends the row settles onto
+   the VOID ground with a decorative hairline and `--textDim` text — still
+   legibly done, no longer competing. What is outstanding keeps `--panel` and the
+   structural border, and the first outstanding row gets the lit edge.
 
 ## Rules
 
@@ -213,9 +231,9 @@ paper reads as a printing fault rather than as power.
 **Containers round; data stays geometric.** This is the load-bearing rule of
 the softened world, and it is what stops "rounded" turning into "generic".
 
-- *Furniture* — panels, rows, sheets, inputs, buttons, chips, the tab bar —
+- _Furniture_ — panels, rows, sheets, inputs, buttons, chips, the tab bar —
   takes `--radius` (16px), `--radius-sm` (10px) or `--radius-pill`.
-- *Marks in the notation* — the code strip, the year strip, calendar cells,
+- _Marks in the notation_ — the code strip, the year strip, calendar cells,
   badge blocks, the tick scale, the pulsar plot, empty-state blocks, and the
   daily log's mood, energy and water marks — take **no radius at all**. A
   rounded block stops reading as a printed cell and starts reading as a dot,
@@ -241,7 +259,7 @@ the habit sheet, which sets `minWidth: 0` — seven 48px buttons overflow a
 
 **Contrast is computed, not eyeballed.** Every pair in both themes clears WCAG
 AA (4.5:1) against `--panel`, the lightest ground any text sits on. Category
-blocks clear the 3:1 non-text floor against *both* grounds — that constraint is
+blocks clear the 3:1 non-text floor against _both_ grounds — that constraint is
 what forced the mid-luminance band, and it is why there is no bone-white or
 bright-yellow category.
 
@@ -255,7 +273,7 @@ repaints, and the pulsar plot has up to 90 points doing it at once.
 Completing a habit sweeps the row. Reaching a level, or earning a badge,
 presents a System card. Nothing else moves — nothing animates on mount, on
 scroll, or because a screen appeared. A habit tracker opened twice a day cannot
-afford an entrance, and an animation that plays when you *undo* something is
+afford an entrance, and an animation that plays when you _undo_ something is
 telling you a lie about what happened, so un-completing is silent.
 
 **Every tap gets acknowledged.** `-webkit-tap-highlight-color` is off, so
@@ -270,8 +288,21 @@ of a bottom sheet; a primary button below the fold reads as a broken flow.
 Found on a real Galaxy S9+, not in a browser.
 
 **Colour is never the only signal.** A category block is always accompanied by
-its label, and the code strip encodes state as shape (solid / hollow / dot)
-before it encodes it as hue.
+its label, and the code strip encodes state as shape (solid / hollow / bar /
+dot) before it encodes it as hue — it is monochrome, so shape is very nearly all
+it has.
+
+**Red means one thing: something went wrong.** A relapse, a destructive control,
+a failed validation. Nothing that is going _well_ is allowed to be red, which is
+why `cat-fitness` moved off `#d8232a` and why the code strip stopped using
+category colour. There is no `--warn`: it was an exact alias of `--accent`, so
+it rendered every warning as "this is live".
+
+**`--textMuted` never sits on `--bg`.** It is specified against `--panel`, where
+it measures 4.73:1 dark and 4.85:1 light. On the VOID ground in daylight it
+falls to **4.35:1**, under the AA floor. Anything that recedes onto the bare
+ground — the settled done row — uses `--textDim` and gets its subordination
+from size instead.
 
 ## Deliberate deviations
 
@@ -279,7 +310,9 @@ Both of the detector waivers this project used to carry are **gone**, resolved
 by the redesign rather than re-argued:
 
 - **`side-tab`** — the 3px category stripe no longer exists. Category is
-  carried by the code strip, which is a better signal and not a border.
+  carried in words, by the `{cat.label}` line every row that draws a strip
+  already prints directly above it. That was true before the strip went
+  monochrome too; the colour was never the thing doing the work.
 - **`overused-font`** — Inter is gone. Archivo and JetBrains Mono are still
   self-hosted through `@fontsource-variable/*`, which is what solved the
   desktop build's CSP-blocked Google Fonts `@import` in the first place. The
@@ -310,6 +343,6 @@ Two judgement calls that are not detector rules:
 ## Still open
 
 Nothing from the previous system carried forward. The one item that used to sit
-here — badges unlocking off the *current* streak while Stats printed *best
-ever* above them — was fixed before this redesign; `earnedBadges` keys off
+here — badges unlocking off the _current_ streak while Stats printed _best
+ever_ above them — was fixed before this redesign; `earnedBadges` keys off
 `bestStreak` now.

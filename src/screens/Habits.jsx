@@ -95,7 +95,6 @@ export default function Habits() {
                 </div>
                 <CodeStrip
                   days={vow ? vowStripDays(habit, today) : stripDays(habit, today)}
-                  color={cat.color}
                   size={9}
                   gap={2}
                 />

@@ -410,14 +410,22 @@ describe('vows and the relapse flow', () => {
     await click([...container.querySelectorAll('button')].find((b) => b.textContent === 'Relapse'))
     expect(container.textContent).toContain('Record a relapse')
 
-    // Nothing is pre-selected: the button must not be armed on open.
+    // The control lives on the vow's own row now, so opening the sheet has
+    // already named a vow and it starts picked. Confirming is still a separate,
+    // explicit press on a danger button — the destructive step is never one tap.
     const confirm = () =>
       [...container.querySelectorAll('button')].find((b) => b.textContent?.startsWith('Reset '))
-    expect(confirm().disabled).toBe(true)
+    expect(confirm().disabled).toBe(false)
+    expect(confirm().textContent).toBe('Reset 1 streak')
 
-    await click(
+    // Still multi-select, and still deselectable: tapping the picked vow clears
+    // it and disarms the button.
+    const pick = () =>
       [...container.querySelectorAll('button')].find((b) => b.textContent?.includes('No smoking'))
-    )
+    await click(pick())
+    expect(confirm().disabled).toBe(true)
+    await click(pick())
+
     expect(confirm().textContent).toBe('Reset 1 streak')
     await click(confirm())
 
@@ -445,13 +453,9 @@ describe('vows and the relapse flow', () => {
     const clean = seedVow(30)
     const first = await render()
 
+    // Opening from the row pre-picks that vow, so this is open-then-confirm.
     await click(
       [...first.container.querySelectorAll('button')].find((b) => b.textContent === 'Relapse')
-    )
-    await click(
-      [...first.container.querySelectorAll('button')].find((b) =>
-        b.textContent?.includes('No smoking')
-      )
     )
     await click(
       [...first.container.querySelectorAll('button')].find((b) =>
