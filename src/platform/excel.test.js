@@ -1,6 +1,14 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { buildWorkbook, excelFilename, exportDates } from './excel'
 import { emptyDoc } from '../state/reducer'
+
+// exceljs is imported lazily inside buildWorkbook (excel.js:85) and is ~250 KB,
+// so on a cold Vite cache the first test to call it pays the whole transform
+// and can blow the 5s default — which fails the release build, since CI starts
+// cold every time. Warm it once here so the cost lands on no single assertion.
+beforeAll(async () => {
+  await import('exceljs')
+}, 60000)
 
 // 2026-06-01 Mon … 2026-06-07 Sun
 const MON = '2026-06-01'
