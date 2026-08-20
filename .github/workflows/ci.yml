@@ -1,0 +1,34 @@
+name: CI
+
+# The release workflow already runs the tests, but only on a tag — which means
+# a broken `main` stays green-looking until someone cuts a release. This runs
+# on every push and pull request so the badge in the README means something.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Lint, format and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      # Scoped to src/: legacy/ is the archived Electron app kept for
+      # reference and is deliberately not reformatted.
+      - name: Check formatting
+        run: npx prettier --check src
+
+      - run: npm test
