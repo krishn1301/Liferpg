@@ -79,10 +79,25 @@ export async function syncReminders(habits, todayKey) {
         channelId: CHANNEL,
         schedule: {
           at: r.at,
-          // Let Android batch these with other wakeups. A habit reminder is not
-          // an alarm, and asking for exact delivery pulls in SCHEDULE_EXACT_ALARM,
-          // which Google Play restricts to apps that genuinely need it.
-          allowWhileIdle: false
+          // Not the same knob as exactness, which is what the previous comment
+          // here assumed. The plugin picks between four AlarmManager calls from
+          // two independent inputs: `canScheduleExactAlarms()` decides exact vs
+          // windowed, and this flag decides RTC_WAKEUP vs plain RTC. Leaving it
+          // false bought nothing — it did not avoid SCHEDULE_EXACT_ALARM, it
+          // just gave up waking the phone.
+          //
+          // `setAndAllowWhileIdle(RTC_WAKEUP, …)` needs no permission at all.
+          // Without it Android schedules a non-waking alarm, so a reminder set
+          // for 8am on a sleeping phone waits until something else wakes the
+          // device — which for the one notification this app sends all day is
+          // the difference between a reminder and no reminder. Measured on a
+          // Pixel 9a (Android 17): `dumpsys alarm` showed `type=RTC` with a
+          // one-hour delivery window, and a 15:10 reminder landed at 15:12 on a
+          // phone that was awake the whole time.
+          //
+          // Doze throttles these to roughly one per app every nine minutes.
+          // That is a ceiling this app never approaches.
+          allowWhileIdle: true
         },
         extra: { habitId: r.habitId, dateKey: r.dateKey }
       }))
